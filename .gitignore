@@ -1,0 +1,14 @@
+# Ignore all .key files
+**/*.key
+
+# Ignore all .bundle.pem files
+**/*.bundle.pem
+
+# Allow the deriva-dev-localhost certificate key
+!deriva/certs/deriva-dev-localhost/deriva-dev-localhost.key
+
+# mac finder
+.DS_Store
+
+# pycharm
+.idea/

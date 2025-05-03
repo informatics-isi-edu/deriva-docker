@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['deriva-monitoring-prometheus:9090']
+
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['deriva-monitoring-node-exporter:9100']
+
+  - job_name: 'apache_exporter'
+    static_configs:
+      - targets: ['deriva-monitoring-apache-exporter:9117']
+
+  - job_name: 'postgres_exporter'
+    static_configs:
+      - targets: ['deriva-monitoring-postgres-exporter:9187']

@@ -1,0 +1,9 @@
+tls:
+  certificates:
+    - certFile: "${CERT_DIR}/${CERT_FILENAME}"
+      keyFile: "${CERT_DIR}/${KEY_FILENAME}"
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "${CERT_DIR}/${CERT_FILENAME}"
+        keyFile: "${CERT_DIR}/${KEY_FILENAME}"

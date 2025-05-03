@@ -1,0 +1,7 @@
+services:
+  cron:
+    build: .
+    container_name: deriva-scheduler
+    networks:
+      - internal_network
+    restart: unless-stopped

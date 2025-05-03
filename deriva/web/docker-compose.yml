@@ -1,0 +1,70 @@
+services:
+  apache:
+    build: .
+    container_name: deriva-webserver
+    restart: no
+    depends_on:
+      database:
+        condition: service_healthy
+      queue:
+        condition: service_healthy
+      logging:
+        condition: service_healthy
+    networks:
+      - internal_network
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+    volumes:
+      - home:/home
+      - www:/var/www
+      - certs:/certs
+      - pg_socket:/var/run/postgresql
+      - ./entrypoint.sh:/deriva/web/entrypoint.sh
+      - ../certs:/certs-ext:ro
+    environment:
+      - HOSTNAME=${HOSTNAME}
+      - DEPLOY_ENV=${DEPLOY_ENV}
+      - RSYSLOG_IP=${RSYSLOG_IP}
+      - CERT_FILENAME=${CERT_FILENAME}
+      - KEY_FILENAME=${KEY_FILENAME}
+      - CA_FILENAME=${CA_FILENAME}
+      - CERT_DIR=${CERT_DIR}
+      - CREATE_TEST_USERS=${CREATE_TEST_USERS}
+      - CREATE_TEST_DB=${CREATE_TEST_DB}
+    healthcheck:
+      test: [ "CMD", "curl", "-fk", "https://localhost/healthcheck.txt" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 5s
+    entrypoint: [ "/bin/bash", "/deriva/web/entrypoint.sh" ]
+
+  apache-external:
+    extends:
+      service: apache
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${HTTPS_PORT}:${HTTPS_PORT}"
+
+  apache-rproxy:
+    extends:
+      service: apache
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.apache.rule=Host(`${HOSTNAME}`)"
+      - "traefik.http.routers.apache.entrypoints=websecure"
+      - "traefik.http.routers.apache.tls=true"
+      - "traefik.http.routers.apache.tls.options=mintls13@file"
+      - "traefik.http.services.apache.loadbalancer.server.scheme=https"
+      - "traefik.http.services.apache.loadbalancer.server.port=443"
+      - "traefik.http.services.apache.loadbalancer.serversTransport=skipVerify@file"
+
+  apache-rproxy-letsencrypt:
+    extends:
+      service: apache-rproxy
+    labels:
+      - "traefik.http.routers.apache.tls.certresolver=letsencrypt"
+

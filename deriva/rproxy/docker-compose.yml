@@ -1,0 +1,94 @@
+services:
+  traefik:
+    container_name: deriva-rproxy
+    image: traefik:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      internal_network:
+        ipv4_address: ${RPROXY_IP}
+
+  traefik-static-tls:
+    extends:
+        service: traefik
+    environment:
+      - HOSTNAME=${HOSTNAME}
+      - CERT_FILENAME=${CERT_FILENAME}
+      - KEY_FILENAME=${KEY_FILENAME}
+      - CA_FILENAME=${CA_FILENAME}
+      - CERT_DIR=${CERT_DIR}
+    volumes:
+      - certs:/certs:ro
+      - ../certs:/certs-ext:ro
+      - ./entrypoint.sh:/entrypoint.sh
+      - ./conf/traefik_tls_opts.yaml:/etc/traefik/config/traefik_tls_opts.yaml:ro
+      - ./conf/traefik_tls_certs.yaml.template:/etc/traefik/config/traefik_tls_certs.yaml.template:ro
+    entrypoint: ["/entrypoint.sh"]
+    command:
+#      - "--log.level=debug"
+#      - "--api.dashboard=true"
+#      - "--api.insecure=true"
+#      - "--accesslog=true"
+#      - "--accesslog.format=json"
+#      - "--accesslog.fields.headers.defaultmode=keep"
+      - "--providers.file.watch=true"
+      - "--providers.file.directory=/etc/traefik/config"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.endpoint=tcp://deriva-rproxy-docker-proxy:2375"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+
+  # Prod profile: Let's Encrypt via HTTP challenge
+  traefik-letsencrypt:
+    extends:
+      service: traefik
+    environment:
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    volumes:
+      - ./conf/traefik_tls_opts.yaml:/etc/traefik/config/traefik_tls_opts.yaml:ro
+      - ${LETSENCRYPT_CERTDIR}:/letsencrypt
+    command:
+#      - "--log.level=debug"
+#      - "--api.dashboard=true"
+#      - "--api.insecure=true"
+#      - "--accesslog=true"
+#      - "--accesslog.format=json"
+#      - "--accesslog.fields.headers.defaultmode=keep"
+      - "--providers.file.watch=true"
+      - "--providers.file.directory=/etc/traefik/config"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.endpoint=tcp://deriva-rproxy-docker-proxy:2375"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+
+  # Limit Traefik's access to the docker environment
+  traefik-docker-proxy:
+    image: lscr.io/linuxserver/socket-proxy:latest
+    container_name: deriva-rproxy-docker-proxy
+    environment:
+      - CONTAINERS=1
+      - POST=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    tmpfs:
+      - /run
+    networks:
+      - internal_network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+

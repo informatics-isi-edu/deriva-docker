@@ -1,0 +1,2 @@
+# Explicitly mark the dev-only localhost key as safe text
+deriva/certs/deriva-dev-localhost/deriva-dev-localhost.key linguist-generated=true text

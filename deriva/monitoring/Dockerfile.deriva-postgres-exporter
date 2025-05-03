@@ -1,0 +1,10 @@
+FROM quay.io/prometheuscommunity/postgres-exporter:latest
+
+USER root
+
+# Create a system user named 'postgres' with no password and no home - needed for PEER auth over unix sockets
+RUN addgroup -g 999 postgres
+RUN adduser -S -H -D -u 999 -G postgres postgres
+
+# Switch to the postgres user
+USER postgres

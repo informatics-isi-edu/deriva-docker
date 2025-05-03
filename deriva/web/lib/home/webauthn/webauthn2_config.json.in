@@ -1,0 +1,51 @@
+{
+    "require_client": false,
+    "require_attributes": false,
+    "acl_comments": [
+        "isrd-systems: https://auth.globus.org/3938e0d0-ed35-11e5-8641-22000ab4b42b",
+        "isrd-staff:   https://auth.globus.org/176baec4-ed26-11e5-8e88-22000ab4b42b"
+    ],
+    "listusers_permit": [],
+    "listattributes_permit": [],
+    "manageusers_permit": [],
+    "manageattributes_permit": [],
+
+    "session_expiration_minutes": 30,
+
+    "sessionids_provider": "oauth2",
+    "sessionstates_provider": "globus_auth",
+    "clients_provider": "globus_auth",
+    "preauth_provider": "globus_auth",
+    "attributes_provider": "globus_auth",
+
+    "handler_uri_usersession": "/authn/session",
+
+    "web_cookie_name": "webauthn",
+    "web_cookie_path": "/",
+    "web_cookie_secure": true,
+    "setheader": false,
+
+    "database_schema": "webauthn2_globus_auth",
+    "database_type": "postgres",
+    "database_dsn": "dbname=webauthn",
+    "database_max_retries": 5,
+
+    "oauth2_nonce_hard_timeout": 3600,
+    "oauth2_redirect_uri": "/authn/session",
+    "oauth2_client_secret_file": "/home/secrets/oauth2/client_secret_globus.json",
+    "oauth2_scope": "openid https://auth.globus.org/scopes/@@CHANGE_ME@@/deriva_all",
+    "oauth2_discovery_uri": "file:///usr/local/etc/oauth2/discovery_globus.json",
+    "oauth2_provider_sets_token_nonce": false,
+    "oauth2_accepted_scopes": [
+        {
+            "scope": "https://auth.globus.org/scopes/@@CHANGE_ME@@/deriva_all",
+            "issuer": "https://auth.globus.org"
+        }
+
+    ],
+    "oauth2_discovery_scopes": {
+        "deriva-all": "https://auth.globus.org/scopes/@@CHANGE_ME@@/deriva_all"
+    },
+
+    "default_logout_url": "/chaise/logout"
+}

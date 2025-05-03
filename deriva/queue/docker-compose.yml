@@ -1,0 +1,25 @@
+services:
+  rabbitmq:
+    build: .
+    container_name: deriva-queue
+    depends_on:
+      logging:
+        condition: service_healthy
+    networks:
+      - internal_network
+    restart: unless-stopped
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+    environment:
+      RABBITMQ_NODENAME: rabbit@localhost
+      RABBITMQ_NODE_IP_ADDRESS: 0.0.0.0
+    volumes:
+      - queue:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 25s
+      timeout: 10s
+      retries: 3

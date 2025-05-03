@@ -1,0 +1,136 @@
+  services:
+    # DERIVA Core services
+    logging:
+      profiles: [ deriva-base, deriva-core ]
+      extends:
+        file: logging/docker-compose.yml
+        service: rsyslog
+    database:
+      profiles: [deriva-base, deriva-core]
+      extends:
+        file: database/docker-compose.yml
+        service: postgres
+    queue:
+      profiles: [deriva-base, deriva-core]
+      extends:
+        file: queue/docker-compose.yml
+        service: rabbitmq
+    web:
+      profiles: [ deriva-web, deriva-core ]
+      extends:
+        file: web/docker-compose.yml
+        service: apache-external
+    web-rproxy:
+      profiles: [ deriva-web-rproxy ]
+      extends:
+        file: web/docker-compose.yml
+        service: apache-rproxy
+    web-rproxy-letsencrypt:
+      profiles: [ deriva-web-rproxy-letsencrypt ]
+      extends:
+        file: web/docker-compose.yml
+        service: apache-rproxy-letsencrypt
+    rproxy:
+      profiles: [ deriva-web-rproxy ]
+      extends:
+        file: rproxy/docker-compose.yml
+        service: traefik-static-tls
+      depends_on:
+        rproxy-docker-proxy:
+          condition: service_started
+        web-rproxy:
+          condition: service_healthy
+    rproxy-letsencrypt:
+      profiles: [ deriva-web-rproxy-letsencrypt ]
+      extends:
+        file: rproxy/docker-compose.yml
+        service: traefik-letsencrypt
+      depends_on:
+        rproxy-docker-proxy:
+          condition: service_started
+        web-rproxy-letsencrypt:
+          condition: service_healthy
+    rproxy-docker-proxy:
+      profiles: [ deriva-web-rproxy, deriva-web-rproxy-letsencrypt ]
+      extends:
+        file: rproxy/docker-compose.yml
+        service: traefik-docker-proxy
+#    scheduler:
+#      extends:
+#        file: scheduler/docker-compose.yml
+#        service: cron
+
+    # DERIVA Monitoring services
+    grafana-external:
+      profiles: [ deriva-monitoring ]
+      extends:
+        file: monitoring/docker-compose.yml
+        service: grafana-external-https
+    grafana-rproxy:
+      profiles: [ deriva-monitoring-rproxy ]
+      extends:
+        file: monitoring/docker-compose.yml
+        service: grafana-rproxy
+    loki:
+      profiles: [deriva-monitoring-base]
+      extends:
+        file: monitoring/docker-compose.yml
+        service: loki
+    promtail:
+      profiles: [deriva-monitoring-base]
+      extends:
+        file: monitoring/docker-compose.yml
+        service: promtail
+    prometheus:
+      profiles: [ deriva-monitoring-base ]
+      extends:
+        file: monitoring/docker-compose.yml
+        service: prometheus
+    node_exporter:
+      profiles: [ deriva-monitoring-base ]
+      extends:
+        file: monitoring/docker-compose.yml
+        service: node_exporter
+    apache_exporter:
+      profiles: [ deriva-monitoring-base ]
+      extends:
+        file: monitoring/docker-compose.yml
+        service: apache_exporter
+    postgres_exporter:
+      profiles: [ deriva-monitoring-base ]
+      extends:
+        file: monitoring/docker-compose.yml
+        service: postgres_exporter
+
+    # DDNS Automatic Updater
+    ddns-updater:
+      profiles: [ ddns-update ]
+      extends:
+        file: ddns-updater/docker-compose.yml
+        service: ddns-updater
+
+  volumes:
+    # Deriva Core
+    www:          # Webserver data
+    home:         # Webserver home dirs (source code, service configs and secrets)
+    pg_data:      # Postgres data
+    pg_socket:    # Postgres unix socket
+    queue:        # RabbitMQ data
+    logs:         # Rsyslog logs
+
+    # Deriva Monitoring UI
+    loki_wal:
+    loki_data:
+    grafana_data:
+    prometheus_data:
+
+    # TLS certificates
+    certs:
+
+  networks:
+    internal_network:
+      driver: bridge
+      ipam:
+        config:
+          - subnet: ${SUBNET}
+            gateway: ${GATEWAY}

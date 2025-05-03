@@ -1,0 +1,11 @@
+services:
+  ddns-updater:
+    build: .
+    container_name: ddns-updater
+    volumes:
+      - ${HOME}/.deriva-docker/ddns/ydns/ydns.env:/run/secrets/ydns.env:ro
+      - ./entrypoint.sh:/deriva/ddns/entrypoint.sh
+    networks:
+      - internal_network
+    profiles: ["ddns"]
+    entrypoint: ["/bin/bash", "/deriva/ddns/entrypoint.sh"]

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DERIVA Installation Landing Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            text-align: center;
+            padding: 50px;
+        }
+        .container {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        .logo {
+            max-width: 200px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #06124c;
+        }
+        .links {
+            margin-top: 20px;
+        }
+        .links a {
+            display: block;
+            margin: 10px 0;
+            color: #0056a3;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Containerized DERIVA!</h1>
+        <p>This is the landing page for a new containerized DERIVA installation. If you are seeing this page it is
+            likely that the web server is up and running. Note that the rest of the system may or may not be fully
+            configured yet, depending on the launch deployment options.</p>
+
+        <div class="links">
+            <p><a href="/ermrest/">Test ERMrest</a></p>
+            <p><a href="/chaise/recordset/#1/Data:Collection@sort(RID)">Sample Catalog</a>Must be installed</p>
+            <p><a href="/monitoring/dashboards">Monitoring UI</a>Monitoring container(s) must be running</p>
+            <script>
+                document.write('<p><a href="' + location.protocol + '//' + location.hostname +
+                    ':3000" target="_blank">' + 'Monitoring UI (no reverse proxy)</a>' +
+                    'Monitoring container(s) must be running with UI servery exposed on port 3000</p>');
+            </script>
+
+        </div>
+    </div>
+</body>
+</html>

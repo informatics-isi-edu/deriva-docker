@@ -1,0 +1,27 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: deriva-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: deriva
+          __path__: /var/log/shared/*.log{,.1}
+    pipeline_stages:
+      - match:
+          selector: '{job="deriva"}'
+          stages:
+          - regex:
+             source: filename
+             expression: '^/var/log/shared/(?:.*/)?(?P<log>[^/]+)\.log(?:\.\d+)?$'
+          - labels:
+               log:

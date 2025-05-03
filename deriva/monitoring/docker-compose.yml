@@ -1,0 +1,181 @@
+services:
+  loki:
+    image: grafana/loki:2.9.13
+    container_name: deriva-monitoring-loki
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+      - -log.level=warn
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - internal_network
+    depends_on:
+      logging:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: deriva-monitoring-promtail
+    command:
+      - -config.file=/etc/promtail/config.yaml
+      - -log.level=warn
+    volumes:
+      - logs:/var/log/shared:ro
+      - ./promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro
+    networks:
+      - internal_network
+    depends_on:
+      loki:
+        condition: service_started
+      logging:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: deriva-monitoring-grafana
+    environment:
+      - HOSTNAME=${HOSTNAME}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_LOG_LEVEL=warn
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - internal_network
+    depends_on:
+      logging:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+
+  grafana-external:
+    extends:
+      service: grafana
+    ports:
+      - "3000:3000"
+
+  grafana-external-https:
+    extends:
+      service: grafana-external
+    environment:
+      - GF_SERVER_PROTOCOL=https
+
+  grafana-rproxy:
+    extends:
+      service: grafana
+    environment:
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/monitoring/
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`${HOSTNAME}`) && PathPrefix(`/monitoring`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.options=mintls13@file"
+      - "traefik.http.routers.grafana.middlewares=grafana-strip-prefix"
+      - "traefik.http.middlewares.grafana-strip-prefix.stripprefix.prefixes=/monitoring"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: deriva-monitoring-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --log.level=warn
+    volumes:
+      - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - internal_network
+    depends_on:
+      logging:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: deriva-monitoring-node-exporter
+    pid: "host"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+    networks:
+      - internal_network
+    depends_on:
+      logging:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+
+  apache_exporter:
+    image: lusotycoon/apache-exporter:latest
+    container_name: deriva-monitoring-apache-exporter
+    networks:
+      - internal_network
+    depends_on:
+      logging:
+        condition: service_healthy
+    entrypoint: ["/bin/apache_exporter", "--insecure", "--scrape_uri=https://deriva-webserver/server-status?auto"]
+    restart: unless-stopped
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+
+  postgres_exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile.deriva-postgres-exporter
+    container_name: deriva-monitoring-postgres-exporter
+    command: "--config.file=/etc/prometheus/prometheus.yaml"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres@/postgres?host=/var/run/postgresql&sslmode=disable"
+    volumes:
+      - pg_socket:/var/run/postgresql
+    networks:
+      - internal_network
+    depends_on:
+      logging:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
