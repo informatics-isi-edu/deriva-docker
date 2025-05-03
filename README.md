@@ -90,7 +90,7 @@ certificate invalidity warnings for certificates issued by this CA.
 
 #### Linux:
 ```bash
-    sudo cp ./deriva/certs/deriva-dev-ca.crt /usr/local/share/ca-certificates/deriva-dev-local-ca.crt
+    sudo cp ./deriva/certs/deriva-dev-ca.crt /usr/local/share/ca-certificates/deriva-dev-ca.crt
     sudo update-ca-certificates
 ```
 
