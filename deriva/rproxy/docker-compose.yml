@@ -4,8 +4,8 @@ services:
     image: traefik:latest
     restart: no
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${HTTPS_PORT}:${HTTPS_PORT}"
     networks:
       internal_network:
         ipv4_address: ${RPROXY_IP}
@@ -38,10 +38,10 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.endpoint=tcp://deriva-rproxy-docker-proxy:2375"
-      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.address=:${HTTP_PORT}"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.address=:${HTTPS_PORT}"
       - "--entrypoints.websecure.http.tls=true"
 
   # Prod profile: Let's Encrypt via HTTP challenge
@@ -65,10 +65,10 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.endpoint=tcp://deriva-rproxy-docker-proxy:2375"
-      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.address=:${HTTP_PORT}"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.address=:${HTTPS_PORT}"
       - "--entrypoints.websecure.http.tls=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
