@@ -95,7 +95,7 @@ certificate invalidity warnings for certificates issued by this CA.
 
 #### Linux (Fedora/RHEL):
 ```bash
-    sudo cp ./deriva/certs/deriva-dev-ca.crt /etc/pki/ca-trust/source/deriva-dev-ca.crt && sudo update-ca-trust
+    sudo cp ./deriva/certs/deriva-dev-ca.crt /etc/pki/ca-trust/source/anchors/deriva-dev-ca.crt && sudo update-ca-trust
 ```
 
 #### MacOS:
