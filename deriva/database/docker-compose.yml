@@ -5,7 +5,7 @@ services:
     depends_on:
       logging:
         condition: service_healthy
-    restart: unless-stopped
+    restart: no
     networks:
       - internal_network
     logging:

@@ -11,3 +11,6 @@ RUN chmod 0644 /etc/logrotate.d/rsyslog
 
 RUN chmod +x /usr/local/bin/logrotate.sh && \
     mkdir -p /var/log/shared
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod 0644 /entrypoint.sh

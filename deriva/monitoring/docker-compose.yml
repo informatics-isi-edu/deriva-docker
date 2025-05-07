@@ -13,7 +13,7 @@ services:
     depends_on:
       logging:
         condition: service_healthy
-    restart: unless-stopped
+    restart: no
     logging:
       driver: syslog
       options:
@@ -36,7 +36,7 @@ services:
         condition: service_started
       logging:
         condition: service_healthy
-    restart: unless-stopped
+    restart: no
     logging:
       driver: syslog
       options:
@@ -47,7 +47,7 @@ services:
     image: grafana/grafana:latest
     container_name: deriva-monitoring-grafana
     environment:
-      - HOSTNAME=${HOSTNAME}
+      - HOSTNAME=${CONTAINER_HOSTNAME}
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
       - GF_LOG_LEVEL=warn
@@ -61,7 +61,7 @@ services:
     depends_on:
       logging:
         condition: service_healthy
-    restart: unless-stopped
+    restart: no
     logging:
       driver: syslog
       options:
@@ -87,7 +87,7 @@ services:
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/monitoring/
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`${HOSTNAME}`) && PathPrefix(`/monitoring`)"
+      - "traefik.http.routers.grafana.rule=Host(`${CONTAINER_HOSTNAME}`) && PathPrefix(`/monitoring`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
       - "traefik.http.routers.grafana.tls.options=mintls13@file"
@@ -109,7 +109,7 @@ services:
     depends_on:
       logging:
         condition: service_healthy
-    restart: unless-stopped
+    restart: no
     logging:
       driver: syslog
       options:
@@ -133,7 +133,7 @@ services:
     depends_on:
       logging:
         condition: service_healthy
-    restart: unless-stopped
+    restart: no
     logging:
       driver: syslog
       options:
@@ -149,7 +149,7 @@ services:
       logging:
         condition: service_healthy
     entrypoint: ["/bin/apache_exporter", "--insecure", "--scrape_uri=https://deriva-webserver/server-status?auto"]
-    restart: unless-stopped
+    restart: no
     logging:
       driver: syslog
       options:
@@ -173,7 +173,7 @@ services:
         condition: service_healthy
       database:
         condition: service_healthy
-    restart: unless-stopped
+    restart: no
     logging:
       driver: syslog
       options:

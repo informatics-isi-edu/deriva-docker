@@ -2,7 +2,7 @@ services:
   rsyslog:
     build: ./rsyslog
     container_name: deriva-logging
-    restart: unless-stopped
+    restart: no
     networks:
       internal_network:
         ipv4_address: ${RSYSLOG_IP}
@@ -14,5 +14,4 @@ services:
       start_period: 5s
     volumes:
       - logs:/var/log/shared
-      - ./rsyslog/entrypoint.sh:/deriva/logging/rsyslog/entrypoint.sh
-    entrypoint: ["/bin/bash", "/deriva/logging/rsyslog/entrypoint.sh"]
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]

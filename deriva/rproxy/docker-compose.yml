@@ -2,6 +2,7 @@ services:
   traefik:
     container_name: deriva-rproxy
     image: traefik:latest
+    restart: no
     ports:
       - "80:80"
       - "443:443"
@@ -13,7 +14,7 @@ services:
     extends:
         service: traefik
     environment:
-      - HOSTNAME=${HOSTNAME}
+      - HOSTNAME=${CONTAINER_HOSTNAME}
       - CERT_FILENAME=${CERT_FILENAME}
       - KEY_FILENAME=${KEY_FILENAME}
       - CA_FILENAME=${CA_FILENAME}
@@ -87,7 +88,7 @@ services:
       - /run
     networks:
       - internal_network
-    restart: unless-stopped
+    restart: no
     security_opt:
       - no-new-privileges=true
     read_only: true
