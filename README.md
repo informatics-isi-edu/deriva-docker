@@ -88,10 +88,14 @@ This step is recommended (but functionally optional) when running the container 
 certificate issued by the DERIVA DevOps `deriva-dev` certificate authority. Installing the CA certificate will avoid browser 
 certificate invalidity warnings for certificates issued by this CA.
 
-#### Linux:
+#### Linux (Debian/Ubuntu):
 ```bash
-    sudo cp ./deriva/certs/deriva-dev-ca.crt /usr/local/share/ca-certificates/deriva-dev-ca.crt
-    sudo update-ca-certificates
+    sudo cp ./deriva/certs/deriva-dev-ca.crt /usr/local/share/ca-certificates/deriva-dev-ca.crt && sudo update-ca-certificates
+```
+
+#### Linux (Fedora/RHEL):
+```bash
+    sudo cp ./deriva/certs/deriva-dev-ca.crt /etc/pki/ca-trust/source/deriva-dev-ca.crt && sudo update-ca-trust
 ```
 
 #### MacOS:
@@ -115,8 +119,9 @@ cd deriva
 #### Start the Stack:
 
 ```bash
-docker compose --env-file ~/.deriva-docker/env/localhost.env up -d
+docker compose --env-file ~/.deriva-docker/env/localhost.env up
 ```
+You can append `-d` to the above command to detach and run the stack in the background.
 
 #### Test the Stack:
 Visit `https://localhost` to verify functionality. The landing page will contain some basic links that can be used as entry points for further testing.
@@ -126,6 +131,8 @@ Visit `https://localhost` to verify functionality. The landing page will contain
 ```bash
 docker compose --env-file ~/.deriva-docker/env/localhost.env stop
 ```
+If you ran the stack without detaching (i.e., without `-d`), you can simply `ctrl-c` to stop the stack.
+
 Note you can also use `pause` and `unpause` to temporarily halt the container stack. Resuming from `pause` is fast and  can be useful when you want to disable the containers but then restart them quickly.
 #### Delete the Stack (and optionally, associated volumes):
 ```bash
