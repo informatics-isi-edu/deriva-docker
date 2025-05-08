@@ -1,6 +1,6 @@
 # Virtual host to redirect all traffic to https
 # except for ACME challenges which need to go over port 80
-<VirtualHost *:80>
+<VirtualHost *:${APACHE_HTTP_PORT}>
         <Location />
                 RewriteEngine On
                 RewriteCond %{HTTPS} off
@@ -9,7 +9,7 @@
                 # so back-reference "%2" is the whole original resource path/query
                 # this preserves original percent-encodings in request
                 RewriteCond %{THE_REQUEST} ([^\s]+)\s+([^\s]+)\s+([^\s]+)
-                RewriteRule ^ https://%{HTTP_HOST}%2 [NE,R=307]
+                RewriteRule ^ https://%{SERVER_NAME}:${APACHE_HTTPS_PORT}%2 [NE,R=307]
                 Order allow,deny
                 Allow from all
         </Location>

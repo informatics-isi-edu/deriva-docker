@@ -56,20 +56,40 @@ cp $KEY_PATH $SYSTEM_KEY_PATH
 chmod 600 $SYSTEM_KEY_PATH
 chown root:root $SYSTEM_KEY_PATH
 
+# Inject ServerName into Apache config if provided
+if [[ -n "$HOSTNAME" ]]; then
+    echo "ServerName $HOSTNAME" > /etc/apache2/conf-enabled/servername.conf
+fi
 
 DEPLOYMENT_MARKER_FILE="/var/run/.deriva-stack-deployed"
 if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
 
     echo "🔧   Deploying Deriva stack..."
+    # Deal with possible alternate ports in webauthn ClientSessionCachedProxy config
+    sed -i -E "s/(\"session_host\"\s*:\s*\"localhost:)[0-9]+(\")/\1${APACHE_HTTPS_PORT}\2/" /home/ermrest/ermrest_config.json
+    sed -i -E "s/(\"session_host\"\s*:\s*\"localhost:)[0-9]+(\")/\1${APACHE_HTTPS_PORT}\2/" /home/hatrac/hatrac_config.json
     isrd-stack-mgmt.sh deploy
     isrd_fixup_permissions /var/www
 
+    # Configure Apache vhost ports
+    envsubst '${APACHE_HTTP_PORT} ${APACHE_HTTPS_PORT}' < /etc/apache2/sites-available/http-redirect.conf.template \
+     > /etc/apache2/sites-available/http-redirect.conf
+    envsubst '${APACHE_HTTPS_PORT}' < /etc/apache2/sites-available/default-ssl.conf.template \
+     > /etc/apache2/sites-available/default-ssl.conf
+    # Also need to replace Listen 80 and 443 lines in /etc/apache2/ports.conf to match vhosts entries
+    sed -i \
+      -e "s/^\s*Listen\s\+80\b/Listen ${APACHE_HTTP_PORT}/" \
+      -e "s/^\s*Listen\s\+443\b/Listen ${APACHE_HTTPS_PORT}/" \
+      /etc/apache2/ports.conf
+
+    # Enable vhosts based on deployment
     if [[ "$DEPLOY_ENV" == "core" || "$DEPLOY_ENV" == "basic" ]]; then
       a2ensite -q default-ssl http-redirect
     else
       a2ensite -q default-ssl
     fi
 
+    # Install TLS certificates
     if [[ "$DEPLOY_ENV" == "core" || "$DEPLOY_ENV" == "basic" || "$DEPLOY_ENV" == "test" ]]; then
       if [ -f "$CERT_CA_PATH" ]; then
           echo "🔧  Installing external CA certificate and updating local trust store..."
@@ -118,11 +138,6 @@ if [ ! -f "$TESTENV_MARKER_FILE" ]; then
     echo "✅   Test environment deployment complete."
 else
     echo "✅   Skipping test environment deployment steps; already installed."
-fi
-
-# Inject ServerName into Apache config if provided
-if [[ -n "$HOSTNAME" ]]; then
-    echo "ServerName $HOSTNAME" > /etc/apache2/conf-enabled/servername.conf
 fi
 
 source /etc/apache2/envvars

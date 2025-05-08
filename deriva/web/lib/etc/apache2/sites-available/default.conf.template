@@ -1,4 +1,4 @@
-<VirtualHost *:80>
+<VirtualHost *:${APACHE_HTTP_PORT}>
     ServerName _
 
     # Let Traefik handle HTTPS termination, Apache serves HTTP only

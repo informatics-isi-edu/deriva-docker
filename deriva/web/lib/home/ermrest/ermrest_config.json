@@ -72,7 +72,9 @@
             "routing_key": ""
         }
     },
-
+    "webauthn_proxy_config": {
+        "session_host": "localhost:443"
+    },
     "textfacet_policy": false,
     "require_primary_keys": true,
     "default_limit" : 100

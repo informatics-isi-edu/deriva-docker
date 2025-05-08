@@ -1,4 +1,4 @@
-<VirtualHost *:443>
+<VirtualHost *:${APACHE_HTTPS_PORT}>
         ServerAdmin webmaster@localhost
 
         DocumentRoot /var/www/html

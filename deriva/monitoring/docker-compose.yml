@@ -77,8 +77,12 @@ services:
   grafana-external-https:
     extends:
       service: grafana-external
+    volumes:
+      - ../certs:/etc/grafana/certs:ro
     environment:
       - GF_SERVER_PROTOCOL=https
+      - GF_SERVER_CERT_FILE=/etc/grafana/certs/${CERT_DIR}/${CERT_FILENAME}
+      - GF_SERVER_CERT_KEY=/etc/grafana/certs/${CERT_DIR}/${KEY_FILENAME}
 
   grafana-rproxy:
     extends:
@@ -148,7 +152,9 @@ services:
     depends_on:
       logging:
         condition: service_healthy
-    entrypoint: ["/bin/apache_exporter", "--insecure", "--scrape_uri=https://deriva-webserver/server-status?auto"]
+    environment:
+      - HTTPS_PORT=${HTTPS_PORT}
+    entrypoint: ["/bin/apache_exporter", "--insecure", "--scrape_uri=https://deriva-webserver:${HTTPS_PORT}/server-status?auto"]
     restart: no
     logging:
       driver: syslog

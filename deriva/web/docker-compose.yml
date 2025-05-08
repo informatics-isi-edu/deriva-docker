@@ -26,6 +26,8 @@ services:
       - ../certs:/certs-ext:ro
     environment:
       - HOSTNAME=${CONTAINER_HOSTNAME}
+      - APACHE_HTTP_PORT=${HTTP_PORT}
+      - APACHE_HTTPS_PORT=${HTTPS_PORT}
       - DEPLOY_ENV=${DEPLOY_ENV}
       - RSYSLOG_IP=${RSYSLOG_IP}
       - CERT_FILENAME=${CERT_FILENAME}
@@ -35,7 +37,7 @@ services:
       - CREATE_TEST_USERS=${CREATE_TEST_USERS}
       - CREATE_TEST_DB=${CREATE_TEST_DB}
     healthcheck:
-      test: [ "CMD", "curl", "-fk", "https://localhost/healthcheck.txt" ]
+      test: [ "CMD", "curl", "-fk", "https://localhost:${HTTPS_PORT}/healthcheck.txt" ]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -59,7 +61,7 @@ services:
       - "traefik.http.routers.apache.tls=true"
       - "traefik.http.routers.apache.tls.options=mintls13@file"
       - "traefik.http.services.apache.loadbalancer.server.scheme=https"
-      - "traefik.http.services.apache.loadbalancer.server.port=443"
+      - "traefik.http.services.apache.loadbalancer.server.port=${HTTPS_PORT}"
       - "traefik.http.services.apache.loadbalancer.serversTransport=skipVerify@file"
 
   apache-rproxy-letsencrypt:
