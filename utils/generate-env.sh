@@ -49,6 +49,7 @@ while [[ $# -gt 0 ]]; do
       if [[ -n "$2" && ! "$2" =~ ^- ]]; then CUSTOM_HOSTNAME="$2"; shift 2
       else print_help; exit 0; fi ;;
     --decorate-hostname|-d) DECORATE_HOSTNAME="true"; shift ;;
+    --hatrac-admin-group) HATRAC_ADMIN_GROUP="$2"; shift 2 ;;
     --email) LETSENCRYPT_EMAIL="$2"; shift 2 ;;
     --cert-filename) CERT_FILENAME="$2"; shift 2 ;;
     --key-filename) KEY_FILENAME="$2"; shift 2 ;;
@@ -75,7 +76,7 @@ generate_env_file() {
   GRAFANA_USERNAME="deriva-admin"
   GRAFANA_PASSWORD="deriva-admin"
   POSTGRES_PASSWORD="postgres"
-  HATRAC_ADMIN_GROUP="admin"
+  DEFAULT_HATRAC_ADMIN_GROUP="admin"
   CREATE_TEST_USERS=false
   CREATE_TEST_DB=false
   COMPOSE_PROFILES=deriva-base,deriva-web-rproxy-letsencrypt,deriva-monitoring-base,deriva-monitoring-rproxy,ddns-update
@@ -84,16 +85,19 @@ generate_env_file() {
     prod)
       POSTGRES_PASSWORD=$(openssl rand -base64 16)
       GRAFANA_PASSWORD=$(openssl rand -base64 16)
+      DEFAULT_HATRAC_ADMIN_GROUP="https://auth.globus.org/3938e0d0-ed35-11e5-8641-22000ab4b42b"
       THIRD_OCTET=0
       ;;
     staging)
       POSTGRES_PASSWORD=$(openssl rand -base64 16)
       GRAFANA_PASSWORD=$(openssl rand -base64 16)
+      DEFAULT_HATRAC_ADMIN_GROUP="https://auth.globus.org/3938e0d0-ed35-11e5-8641-22000ab4b42b"
       THIRD_OCTET=1
       ;;
     dev)
       POSTGRES_PASSWORD=$(openssl rand -base64 16)
       GRAFANA_PASSWORD=$(openssl rand -base64 16)
+      DEFAULT_HATRAC_ADMIN_GROUP="https://auth.globus.org/3938e0d0-ed35-11e5-8641-22000ab4b42b"
       THIRD_OCTET=2
       ;;
     test)
@@ -136,6 +140,7 @@ generate_env_file() {
   CA_FILENAME="${CA_FILENAME:-$DEFAULT_CA_FILENAME}"
   LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL:-$DEFAULT_LETSENCRYPT_EMAIL}"
   LETSENCRYPT_CERTDIR="${LETSENCRYPT_CERTDIR:-$DEFAULT_LETSENCRYPT_CERTDIR}"
+  HATRAC_ADMIN_GROUP="${HATRAC_ADMIN_GROUP:-$DEFAULT_HATRAC_ADMIN_GROUP}"
 
   mkdir -p "$OUTPUT_DIR"
   ENV_FILE="${OUTPUT_DIR}/$SAFE_HOSTNAME.env"
