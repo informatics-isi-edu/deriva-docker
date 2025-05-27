@@ -89,19 +89,17 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
       a2ensite -q default-ssl
     fi
 
-    # Install TLS certificates
-    if [[ "$DEPLOY_ENV" == "core" || "$DEPLOY_ENV" == "basic" || "$DEPLOY_ENV" == "test" ]]; then
-      if [ -f "$CERT_CA_PATH" ]; then
-          echo "🔧  Installing external CA certificate and updating local trust store..."
-          # Install CA certificate so that internal SSL requests do not get rejected
-          cp $CERT_CA_PATH $SYSTEM_CA_CERT_PATH
-          update-ca-certificates
-      else
-          echo "🔧  Installing self-signed certificate to local trust store..."
-          # Just add our self-signed fallback certificate so that internal SSL requests do not get rejected
-          cp $CERT_PATH $SYSTEM_CA_CERT_PATH
-          update-ca-certificates
-      fi
+    # Update local CA certificate store based on what internal cert is being used
+    if [ -f "$CERT_CA_PATH" ]; then
+        echo "🔧  Installing external CA certificate and updating local trust store..."
+        # Install CA certificate so that internal SSL requests do not get rejected
+        cp $CERT_CA_PATH $SYSTEM_CA_CERT_PATH
+        update-ca-certificates
+    else
+        echo "🔧  Installing self-signed certificate to local trust store..."
+        # Just add our self-signed fallback certificate so that internal SSL requests do not get rejected
+        cp $CERT_PATH $SYSTEM_CA_CERT_PATH
+        update-ca-certificates
     fi
 
     # Disable legacy mod_webauthn
