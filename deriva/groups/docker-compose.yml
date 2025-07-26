@@ -1,0 +1,83 @@
+services:
+  deriva-groups:
+    image: deriva-groups:latest
+    container_name: deriva-groups
+    build:
+      context: .
+      dockerfile: ./groups.Dockerfile
+    environment:
+      - DEPLOY_ENV=${DEPLOY_ENV}
+      - CONTAINER_HOSTNAME=${CONTAINER_HOSTNAME}
+      - DERIVA_GROUPS_DEBUG=true
+    depends_on:
+      logging:
+        condition: service_healthy
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+    volumes:
+#      - ./src/deriva-groups:/deriva-groups  # Optional for live code editing
+      - ./secrets:/deriva-groups/secrets
+      - ./config/deriva_groups.env:/deriva-groups/config/deriva_groups.env:ro
+      - ./config/groups_config.json:/deriva-groups/config/groups_config.json:ro
+      - ./entrypoint.sh:/deriva-groups/entrypoint.sh
+      - logs:/var/log/shared
+      - deriva_groups:/root/deriva-groups
+    networks:
+      - internal_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8999/health" ]
+      interval: 15s
+      timeout: 10s
+      retries: 4
+      start_period: 5s
+    entrypoint: [ "/deriva-groups/entrypoint.sh" ]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.deriva-groups.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`rproxy`)) && PathPrefix(`/deriva/groups`)"
+      - "traefik.http.routers.deriva-groups.entrypoints=websecure"
+      - "traefik.http.routers.deriva-groups.tls=true"
+      - "traefik.http.routers.deriva-groups.tls.options=mintls13@file"
+      - "traefik.http.routers.deriva-groups.priority=60"
+      - "traefik.http.routers.deriva-groups.middlewares=deriva-groups-stripprefix"
+      - "traefik.http.services.deriva-groups.loadbalancer.server.port=8999"
+      - "traefik.http.middlewares.deriva-groups-stripprefix.stripPrefix.prefixes=/deriva/groups"
+
+  deriva-groups-ui:
+    image: deriva-groups-ui:latest
+    container_name: deriva-groups-ui
+    build:
+      context: .
+      dockerfile: groups-ui.Dockerfile
+      args:
+        - VITE_BASE_URL=https://${CONTAINER_HOSTNAME}
+        - VITE_BACKEND_URL=https://${CONTAINER_HOSTNAME}
+        - VITE_UI_BASE_PATH=/deriva/apps/groups
+        - VITE_API_BASE_PATH=/deriva/groups
+        - VITE_AUTH_API_BASE_PATH=/authn
+    depends_on:
+      deriva-groups:
+        condition: service_started
+      logging:
+        condition: service_healthy
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+    volumes:
+      - ./src/deriva-groups-ui:/deriva-groups-ui  # Optional for live code editing
+    networks:
+      - internal_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.deriva-groups-ui.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`rproxy`)) && PathPrefix(`/deriva/apps`)"
+      - "traefik.http.routers.deriva-groups-ui.entrypoints=websecure"
+      - "traefik.http.routers.deriva-groups-ui.tls=true"
+      - "traefik.http.routers.deriva-groups-ui.tls.options=mintls13@file"
+      - "traefik.http.routers.deriva-groups-ui.priority=58"
+      - "traefik.http.routers.deriva-groups-ui.middlewares=deriva-groups-ui-stripprefix"
+      - "traefik.http.services.deriva-groups-ui.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.deriva-groups-ui-stripprefix.stripPrefix.prefixes=/deriva"

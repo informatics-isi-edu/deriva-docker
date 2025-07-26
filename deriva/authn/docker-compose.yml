@@ -1,0 +1,185 @@
+services:
+  credenza:
+    build:
+      context: .
+    image: credenza:latest
+    container_name: credenza
+    hostname: credenza
+    environment:
+      - DEPLOY_ENV=${DEPLOY_ENV}
+      - CONTAINER_HOSTNAME=${CONTAINER_HOSTNAME}
+      - CREDENZA_DEBUG=true
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+    volumes:
+      - ./secrets:/credenza/secrets
+      - ./credenza-entrypoint.sh:/credenza/entrypoint.sh
+      - ./config/credenza.env:/credenza/config/credenza.env:ro
+      - ./config/oidc_idp_profiles.json.in:/credenza/config/oidc_idp_profiles.json.in:ro
+#      - ./config-mount:/credenza/config # this can be uncommented to provide an externally mounted config override
+#      - ./src/credenza:/credenza  # Optional for live code editing
+      - logs:/var/log/shared
+    networks:
+      - internal_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8999/health" ]
+      interval: 15s
+      timeout: 10s
+      retries: 4
+      start_period: 5s
+    entrypoint: [ "/credenza/entrypoint.sh" ]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.credenza.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`rproxy`)) && PathPrefix(`/authn`)"
+      - "traefik.http.routers.credenza.entrypoints=websecure"
+      - "traefik.http.routers.credenza.tls=true"
+      - "traefik.http.routers.credenza.tls.options=mintls13@file"
+      - "traefik.http.routers.credenza.priority=60"
+      - "traefik.http.routers.credenza.middlewares=credenza-stripprefix"
+      - "traefik.http.services.credenza.loadbalancer.server.port=8999"
+      - "traefik.http.middlewares.credenza-stripprefix.stripPrefix.prefixes=/authn"
+
+  credenza-test:
+    extends:
+      service: credenza
+    secrets:
+      - source: keycloak_deriva_client_secret_test
+        target: keycloak_deriva_client_secret
+      - source: credenza_db_password_test
+        target: credenza_db_password
+      - source: credenza_encryption_key_test
+        target: credenza_encryption_key
+    profiles:
+      - test
+
+  credenza-dev:
+    extends:
+      service: credenza
+    secrets:
+      - source: keycloak_deriva_client_secret_dev
+        target: keycloak_deriva_client_secret
+      - source: credenza_db_password_dev
+        target: credenza_db_password
+      - source: credenza_encryption_key_dev
+        target: credenza_encryption_key
+    profiles:
+      - dev
+
+  credenza-staging:
+    extends:
+      service: credenza
+    secrets:
+      - source: keycloak_deriva_client_secret_staging
+        target: keycloak_deriva_client_secret
+      - source: credenza_db_password_staging
+        target: credenza_db_password
+      - source: credenza_encryption_key_staging
+        target: credenza_encryption_key
+    profiles:
+      - staging
+
+  credenza-prod:
+    extends:
+      service: credenza
+    secrets:
+      - source: keycloak_deriva_client_secret_prod
+        target: keycloak_deriva_client_secret
+      - source: credenza_db_password_prod
+        target: credenza_db_password
+      - source: credenza_encryption_key_prod
+        target: credenza_encryption_key
+    profiles:
+      - prod
+
+  # Redis backend containers for Credenza
+  credenza-redis:
+    image: redis:7-alpine
+    container_name: credenza-redis
+    networks:
+      - internal_network
+    entrypoint: ["/usr/local/bin/custom-entrypoint.sh"]
+    healthcheck:
+      test: >
+        sh -c 'redis-cli -a "$(tr -d "\n" < /run/secrets/credenza_db_password)" ping'
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - ./config/redis.conf.in:/usr/local/etc/redis/redis.conf.in:ro
+      - ./redis-entrypoint.sh:/usr/local/bin/custom-entrypoint.sh:ro
+      - credenza_redis_data:/data
+
+  credenza-redis-test:
+    extends:
+      service: credenza-redis
+    secrets:
+      - source: credenza_db_password_test
+        target: credenza_db_password
+    profiles:
+      - test
+
+  credenza-redis-dev:
+    extends:
+      service: credenza-redis
+    secrets:
+      - source: credenza_db_password_dev
+        target: credenza_db_password
+    profiles:
+      - dev
+
+  credenza-redis-staging:
+    extends:
+      service: credenza-redis
+    secrets:
+      - source: credenza_db_password_staging
+        target: credenza_db_password
+    profiles:
+      - staging
+
+  credenza-redis-prod:
+    extends:
+      service: credenza-redis
+    secrets:
+      - source: credenza_db_password_prod
+        target: credenza_db_password
+    profiles:
+      - prod
+
+  credenza-redis-commander:
+    image: ghcr.io/joeferner/redis-commander:latest
+    container_name: credenza-redis-commander
+    depends_on:
+      rproxy:
+        condition: service_started
+      credenza-redis-test:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=credenza-redis
+      - REDIS_PORT=6379
+      - REDIS_USERNAME=credenza
+      - REDIS_PASSWORD_FILE=/run/secrets/credenza_db_password
+      - HTTP_USER=credenza-admin
+      - HTTP_PASSWORD_FILE=/run/secrets/credenza_redis_commander_password
+    secrets:
+      - source: credenza_db_password_test
+        target: credenza_db_password
+      - source: credenza_redis_commander_password_test
+        target: credenza_redis_commander_password
+    networks:
+      - internal_network
+    profiles:
+      - test
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis-commander.rule=Host(`${CONTAINER_HOSTNAME}`) && PathPrefix(`/redis`)"
+      - "traefik.http.routers.redis-commander.entrypoints=websecure"
+      - "traefik.http.routers.redis-commander.tls=true"
+      - "traefik.http.routers.redis-commander.tls.options=mintls13@file"
+      - "traefik.http.routers.redis-commander.service=redis-commander"
+      - "traefik.http.routers.redis-commander.priority=50"
+      - "traefik.http.routers.redis-commander.middlewares=redis-commander-stripprefix"
+      - "traefik.http.middlewares.redis-commander-stripprefix.stripPrefix.prefixes=/redis"
+      - "traefik.http.services.redis-commander.loadbalancer.server.port=8081"

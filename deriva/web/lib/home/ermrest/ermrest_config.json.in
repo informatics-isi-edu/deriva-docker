@@ -73,7 +73,8 @@
         }
     },
     "webauthn_proxy_config": {
-        "session_host": "localhost:443"
+        "session_host": "${AUTHN_SESSION_HOST}",
+        "session_https_verify": ${AUTHN_SESSION_HOST_VERIFY}
     },
     "textfacet_policy": false,
     "require_primary_keys": true,

@@ -1,0 +1,10 @@
+{
+  "default": {
+    "issuer": "https://${CONTAINER_HOSTNAME}/auth/realms/deriva",
+    "discovery_url": "http://keycloak:8080/auth/realms/deriva/.well-known/openid-configuration",
+    "revocation_url": "http://keycloak:8080/auth/realms/deriva/protocol/openid-connect/revoke",
+    "logout_url": "https://${CONTAINER_HOSTNAME}/auth/realms/deriva/protocol/openid-connect/logout",
+    "scopes": "openid email profile",
+    "client_secret_file": "secrets/keycloak_client_secret.json"
+  }
+}

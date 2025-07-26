@@ -31,6 +31,9 @@ This project provides a fully containerized deployment of the [DERIVA platform](
 | Container             | Description                                                       |
 |-----------------------|-------------------------------------------------------------------|
 | **Apache (HTTPD)**    | HTTPD serving DERIVA WSGI apps                                    |
+| **Credenza**          | OIDC Authentication Broker Web Service                            |
+| **Keycloak**          | A preconfigured KeyCloak IDP for use with Credenza                |
+| **DERIVA Groups**     | DERIVA Group Management Web Service                               |
 | **PostgreSQL**        | Metadata and relational data store                                |
 | **RabbitMQ**          | Message broker for event notification                             |
 | **Rsyslog**           | Container-based system logging                                    |
@@ -43,6 +46,11 @@ This project provides a fully containerized deployment of the [DERIVA platform](
 | **Grafana**           | Dashboards for monitoring metrics and logs                        |
 | **Loki**              | Centralized log aggregation                                       |
 | **Promtail**          | Tails and ships log information to Loki                           |
+
+#### Note: 
+
+Depending on the Docker Compose profiles used when launching the container stack, some of the above listed containers
+may not be deployed. Options for which compose profiles to use are set by `utils/generate-env.sh`.
 
 ---
 
@@ -110,10 +118,16 @@ Click on the CA certificate file in Windows Explorer and follow the Certificate 
 ---
 ### Working with the Container Stack
 
-The following `docker compose` commands are meant to be executed from the Docker Compose project root: `deriva-docker/deriva`.
+The following `docker` commands are meant to be executed from the Docker Compose project root: `deriva-docker/deriva`.
 
 ```bash
 cd deriva
+```
+
+#### Build the `deriva:base` image:
+
+```bash
+docker build -t deriva/base .
 ```
 
 #### Start the Stack:

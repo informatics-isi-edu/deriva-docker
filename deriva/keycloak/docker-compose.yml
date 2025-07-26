@@ -1,0 +1,93 @@
+services:
+
+  keycloak-healthcheck:
+    image: curlimages/curl:latest
+    container_name: keycloak-healthcheck
+    networks:
+      - internal_network
+    volumes:
+      - ./healthcheck.sh:/home/curl_user/healthcheck.sh:ro
+    entrypoint: [ "/home/curl_user/healthcheck.sh" ]
+    healthcheck:
+      test: [ "CMD", "curl", "-sf", "http://keycloak:9000/auth/health/ready" ]
+      interval: 30s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
+    restart: unless-stopped
+
+  keycloak:
+    container_name: keycloak
+    build: .
+    command:
+      - start
+      - --import-realm
+      - --http-port=8080
+      - --optimized
+    environment:
+      CONTAINER_HOSTNAME: ${CONTAINER_HOSTNAME}
+      KC_DB: dev-file
+      KC_BOOTSTRAP_ADMIN_USERNAME: keycloak-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: keycloak-admin
+      KC_HOSTNAME: https://${CONTAINER_HOSTNAME}/auth
+      KC_HOSTNAME_ADMIN: https://${CONTAINER_HOSTNAME}/auth
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_METRICS_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: "xforwarded"
+      KC_PROXY_ADDRESS_FORWARDING: "true"
+      KC_LOG: console
+      KC_LOG_LEVEL: INFO
+#      KC_LOG_LEVEL: INFO,org.keycloak.common.crypto:TRACE,org.keycloak.crypto:TRACE
+    volumes:
+      - ./config/realm-export.json.in:/opt/realm-export.json.in:ro
+      - keycloak_data:/opt/keycloak/data
+    networks:
+      - internal_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`${CONTAINER_HOSTNAME}`) && PathPrefix(`/auth/`)"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.routers.keycloak.tls.options=mintls13@file"
+      - "traefik.http.routers.keycloak.priority=20"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+
+  keycloak-test:
+    extends:
+      service: keycloak
+    secrets:
+      - source: keycloak_deriva_client_secret_test
+        target: keycloak_deriva_client_secret
+    profiles:
+      - test
+
+  keycloak-dev:
+    extends:
+      service: keycloak
+    secrets:
+      - source: keycloak_deriva_client_secret_dev
+        target: keycloak_deriva_client_secret
+    profiles:
+      - dev
+
+  keycloak-staging:
+    extends:
+      service: keycloak
+    secrets:
+      - source: keycloak_deriva_client_secret_staging
+        target: keycloak_deriva_client_secret
+    profiles:
+      - staging
+
+  keycloak-prod:
+    extends:
+      service: keycloak
+    secrets:
+      - source: keycloak_deriva_client_secret_prod
+        target: keycloak_deriva_client_secret
+    profiles:
+      - prod

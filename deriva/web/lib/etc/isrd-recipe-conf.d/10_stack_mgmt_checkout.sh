@@ -5,7 +5,7 @@ isrd_checkout_code()
     git_checkout ermrest           origin/master
     git_checkout hatrac            origin/master
     git_checkout ermresolve        origin/master
-    git_checkout deriva-web        origin/master
+    git_checkout deriva-web        origin/package-namespace-refactor
     git_checkout deriva-py         origin/master
 
     git_checkout ermrestjs         origin/master

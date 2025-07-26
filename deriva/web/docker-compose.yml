@@ -37,6 +37,8 @@ services:
       - CREATE_TEST_USERS=${CREATE_TEST_USERS}
       - CREATE_TEST_DB=${CREATE_TEST_DB}
       - HATRAC_ADMIN_GROUP=${HATRAC_ADMIN_GROUP}
+      - AUTHN_SESSION_HOST=${AUTHN_SESSION_HOST}
+      - AUTHN_SESSION_HOST_VERIFY=${AUTHN_SESSION_HOST_VERIFY}
     healthcheck:
       test: [ "CMD", "curl", "-fk", "https://localhost:${HTTPS_PORT}/healthcheck.txt" ]
       interval: 15s
@@ -55,12 +57,16 @@ services:
   apache-rproxy:
     extends:
       service: apache
+    environment:
+      - RPROXY_IP=${RPROXY_IP}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.apache.rule=Host(`${CONTAINER_HOSTNAME}`)"
       - "traefik.http.routers.apache.entrypoints=websecure"
       - "traefik.http.routers.apache.tls=true"
       - "traefik.http.routers.apache.tls.options=mintls13@file"
+      - "traefik.http.routers.apache.priority=1"
+      - "traefik.http.routers.apache.service=apache"
       - "traefik.http.services.apache.loadbalancer.server.scheme=https"
       - "traefik.http.services.apache.loadbalancer.server.port=${HTTPS_PORT}"
       - "traefik.http.services.apache.loadbalancer.serversTransport=skipVerify@file"
@@ -70,4 +76,3 @@ services:
       service: apache-rproxy
     labels:
       - "traefik.http.routers.apache.tls.certresolver=letsencrypt"
-

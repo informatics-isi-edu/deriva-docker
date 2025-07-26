@@ -1,110 +1,250 @@
   services:
     # DERIVA Core services
     logging:
-      profiles: [ deriva-base, deriva-core ]
+      profiles:
+        - deriva-base
       extends:
         file: logging/docker-compose.yml
         service: rsyslog
     database:
-      profiles: [deriva-base, deriva-core]
+      profiles:
+        - deriva-base
       extends:
         file: database/docker-compose.yml
         service: postgres
     queue:
-      profiles: [deriva-base, deriva-core]
+      profiles:
+        - deriva-base
       extends:
         file: queue/docker-compose.yml
         service: rabbitmq
     web:
-      profiles: [ deriva-web, deriva-core ]
+      profiles:
+        - deriva-web
       extends:
         file: web/docker-compose.yml
         service: apache-external
     web-rproxy:
-      profiles: [ deriva-web-rproxy ]
+      profiles:
+        - deriva-web-rproxy
       extends:
         file: web/docker-compose.yml
         service: apache-rproxy
     web-rproxy-letsencrypt:
-      profiles: [ deriva-web-rproxy-letsencrypt ]
+      profiles:
+        - deriva-web-rproxy-letsencrypt
       extends:
         file: web/docker-compose.yml
         service: apache-rproxy-letsencrypt
     rproxy:
-      profiles: [ deriva-web-rproxy ]
+      profiles:
+        - rproxy
+        - deriva-web-rproxy
       extends:
         file: rproxy/docker-compose.yml
         service: traefik-static-tls
       depends_on:
-        rproxy-docker-proxy:
+        docker-proxy:
           condition: service_started
         web-rproxy:
           condition: service_healthy
     rproxy-letsencrypt:
-      profiles: [ deriva-web-rproxy-letsencrypt ]
+      profiles:
+        - rproxy-letsencrypt
+        - deriva-web-rproxy-letsencrypt
       extends:
         file: rproxy/docker-compose.yml
         service: traefik-letsencrypt
       depends_on:
-        rproxy-docker-proxy:
+        docker-proxy:
           condition: service_started
         web-rproxy-letsencrypt:
           condition: service_healthy
-    rproxy-docker-proxy:
-      profiles: [ deriva-web-rproxy, deriva-web-rproxy-letsencrypt ]
+    docker-proxy:
+      profiles:
+        - rproxy
+        - docker-proxy
+        - deriva-web-rproxy
+        - deriva-web-rproxy-letsencrypt
       extends:
         file: rproxy/docker-compose.yml
         service: traefik-docker-proxy
-#    scheduler:
-#      extends:
-#        file: scheduler/docker-compose.yml
-#        service: cron
+
+    # DERIVA Auth services
+    credenza-test:
+      profiles:
+        - deriva-auth, test
+      extends:
+        file: authn/docker-compose.yml
+        service: credenza-test
+      depends_on:
+        credenza-redis-test:
+          condition: service_healthy
+      restart: no
+    credenza-dev:
+      profiles:
+        - deriva-auth, dev
+      extends:
+        file: authn/docker-compose.yml
+        service: credenza-dev
+      depends_on:
+        credenza-redis-dev:
+          condition: service_healthy
+      restart: no
+    credenza-staging:
+      profiles:
+        - deriva-auth, staging
+      extends:
+        file: authn/docker-compose.yml
+        service: credenza-staging
+      depends_on:
+        credenza-redis-staging:
+          condition: service_healthy
+      restart: no
+    credenza-prod:
+      profiles:
+        - deriva-auth, prod
+      extends:
+        file: authn/docker-compose.yml
+        service: credenza-prod
+      depends_on:
+        credenza-redis-prod:
+          condition: service_healthy
+      restart: no
+    credenza-redis-test:
+      profiles:
+        - deriva-auth, test
+      extends:
+        file: authn/docker-compose.yml
+        service: credenza-redis-test
+      restart: unless-stopped
+    credenza-redis-dev:
+      profiles:
+        - deriva-auth, dev
+      extends:
+        file: authn/docker-compose.yml
+        service: credenza-redis-dev
+      restart: unless-stopped
+    credenza-redis-staging:
+      profiles:
+        - deriva-auth, staging
+      extends:
+        file: authn/docker-compose.yml
+        service: credenza-redis-staging
+      restart: unless-stopped
+    credenza-redis-prod:
+      profiles:
+        - deriva-auth, prod
+      extends:
+        file: authn/docker-compose.yml
+        service: credenza-redis-prod
+      restart: unless-stopped
+
+    credenza-redis-commander:
+      profiles:
+        - deriva-auth-dev, test
+      extends:
+        file: authn/docker-compose.yml
+        service: credenza-redis-commander
+      restart: no
+
+    # DERIVA Groups
+    deriva-groups:
+      profiles:
+        - deriva-groups
+      extends:
+        file: groups/docker-compose.yml
+        service: deriva-groups
+      depends_on:
+        rproxy:
+          condition: service_started
+    deriva-groups-ui:
+      profiles:
+        - deriva-groups
+      extends:
+        file: groups/docker-compose.yml
+        service: deriva-groups-ui
 
     # DERIVA Monitoring services
     grafana-external:
-      profiles: [ deriva-monitoring ]
+      profiles:
+        - deriva-monitoring
       extends:
         file: monitoring/docker-compose.yml
         service: grafana-external-https
     grafana-rproxy:
-      profiles: [ deriva-monitoring-rproxy ]
+      profiles:
+        - deriva-monitoring-rproxy
       extends:
         file: monitoring/docker-compose.yml
         service: grafana-rproxy
     loki:
-      profiles: [deriva-monitoring-base]
+      profiles:
+        - deriva-monitoring-base
       extends:
         file: monitoring/docker-compose.yml
         service: loki
     promtail:
-      profiles: [deriva-monitoring-base]
+      profiles:
+        - deriva-monitoring-base
       extends:
         file: monitoring/docker-compose.yml
         service: promtail
     prometheus:
-      profiles: [ deriva-monitoring-base ]
+      profiles:
+        - deriva-monitoring-base
       extends:
         file: monitoring/docker-compose.yml
         service: prometheus
     node_exporter:
-      profiles: [ deriva-monitoring-base ]
+      profiles:
+        - deriva-monitoring-base
       extends:
         file: monitoring/docker-compose.yml
         service: node_exporter
     apache_exporter:
-      profiles: [ deriva-monitoring-base ]
+      profiles:
+        - deriva-monitoring-base
       extends:
         file: monitoring/docker-compose.yml
         service: apache_exporter
     postgres_exporter:
-      profiles: [ deriva-monitoring-base ]
+      profiles:
+        - deriva-monitoring-base
       extends:
         file: monitoring/docker-compose.yml
         service: postgres_exporter
 
+    # KeyCloak IDP
+    keycloak-test:
+      profiles:
+        - deriva-auth-keycloak, test
+      extends:
+        file: keycloak/docker-compose.yml
+        service: keycloak-test
+    keycloak-dev:
+      profiles:
+        - deriva-auth-keycloak, dev
+      extends:
+        file: keycloak/docker-compose.yml
+        service: keycloak-dev
+    keycloak-staging:
+      profiles:
+        - deriva-auth-keycloak, staging
+      extends:
+        file: keycloak/docker-compose.yml
+        service: keycloak-staging
+    keycloak-prod:
+      profiles:
+        - deriva-auth-keycloak, prod
+      extends:
+        file: keycloak/docker-compose.yml
+        service: keycloak-prod
+
     # DDNS Automatic Updater
     ddns-updater:
-      profiles: [ ddns-update ]
+      profiles:
+        - ddns-update
       extends:
         file: ddns-updater/docker-compose.yml
         service: ddns-updater
@@ -118,6 +258,9 @@
     queue:        # RabbitMQ data
     logs:         # Rsyslog logs
 
+    # Deriva Groups
+    deriva_groups:
+
     # Deriva Monitoring UI
     loki_wal:
     loki_data:
@@ -127,9 +270,47 @@
     # TLS certificates
     certs:
 
+    # Authn Services
+    credenza_redis_data:
+    keycloak_data:
+
+  secrets:
+    # KeyCloak client secret - used in Keycloak config and Credenza config
+    keycloak_deriva_client_secret_test:
+      file: secrets/test/keycloak_deriva_client_secret.txt
+    keycloak_deriva_client_secret_dev:
+      file: secrets/dev/keycloak_deriva_client_secret.txt
+    keycloak_deriva_client_secret_staging:
+      file: secrets/staging/keycloak_deriva_client_secret.txt
+    keycloak_deriva_client_secret_prod:
+      file: secrets/prod/keycloak_deriva_client_secret.txt
+
+    # Credenza DB password, used in Redis (or other backends) and Credenza config
+    credenza_db_password_test:
+      file: secrets/test/credenza_db_password.txt
+    credenza_db_password_dev:
+      file: secrets/dev/credenza_db_password.txt
+    credenza_db_password_staging:
+      file: secrets/staging/credenza_db_password.txt
+    credenza_db_password_prod:
+      file: secrets/prod/credenza_db_password.txt
+    # Credenza encryption key
+    credenza_encryption_key_test:
+      file: secrets/test/credenza_encryption_key.txt
+    credenza_encryption_key_dev:
+      file: secrets/dev/credenza_encryption_key.txt
+    credenza_encryption_key_staging:
+      file: secrets/staging/credenza_encryption_key.txt
+    credenza_encryption_key_prod:
+      file: secrets/prod/credenza_encryption_key.txt
+    # Redis commander password - used only in test environments
+    credenza_redis_commander_password_test:
+      file: secrets/test/credenza_redis_commander_password.txt
+
   networks:
     internal_network:
       driver: bridge
+      enable_ipv6: false
       ipam:
         config:
           - subnet: ${SUBNET}

@@ -1,0 +1,110 @@
+{
+  "realm": "deriva",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "deriva-client",
+      "secret": "${KEYCLOAK_DERIVA_CLIENT_SECRET}",
+      "redirectUris": [
+        "https://${CONTAINER_HOSTNAME}/authn/callback",
+        "https://${CONTAINER_HOSTNAME}/authn/device/callback"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "https://${CONTAINER_HOSTNAME}/*",
+        "oauth2.device.authorization.grant.enabled": true,
+        "client.use.lightweight.access.token.enabled": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": ""
+      },
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "serviceAccountsEnabled": true,
+      "consentRequired": false,
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "lightweight.claim": "false",
+            "access.token.claim": "true",
+            "claim.name": "groups"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "acr",
+        "profile",
+        "roles",
+        "basic",
+        "email",
+        "organization",
+        "web-origins",
+        "service_account"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "deriva-admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "deriva-admin",
+          "temporary": false
+        }
+      ],
+      "groups": ["admin", "users"]
+    },
+    {
+      "username": "deriva",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "deriva",
+          "temporary": false
+        }
+      ],
+      "groups": ["users"]
+    }
+  ],
+  "groups": [
+    {
+      "name": "admin",
+      "path": "admin",
+      "subGroups": [],
+      "attributes": {},
+      "realmRoles": [
+        "offline_access"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "name": "users",
+      "path": "users",
+      "subGroups": [],
+      "attributes": {},
+      "realmRoles": [
+        "offline_access"
+      ],
+      "clientRoles": {}
+    }
+  ]
+}

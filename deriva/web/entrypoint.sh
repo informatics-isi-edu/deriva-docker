@@ -65,6 +65,12 @@ DEPLOYMENT_MARKER_FILE="/var/run/.deriva-stack-deployed"
 if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
 
     echo "🔧   Deploying Deriva stack..."
+    export ENV PIP_NO_CACHE_DIR=yes
+
+    # Configure ERMRest
+    envsubst '${AUTHN_SESSION_HOST} ${AUTHN_SESSION_HOST_VERIFY}' < /home/ermrest/ermrest_config.json.in \
+     > /home/ermrest/ermrest_config.json
+
     # Deal with possible alternate ports in webauthn ClientSessionCachedProxy config
     sed -i -E "s/(\"session_host\"\s*:\s*\"localhost:)[0-9]+(\")/\1${APACHE_HTTPS_PORT}\2/" /home/ermrest/ermrest_config.json
     sed -i -E "s/(\"session_host\"\s*:\s*\"localhost:)[0-9]+(\")/\1${APACHE_HTTPS_PORT}\2/" /home/hatrac/hatrac_config.json
@@ -87,6 +93,11 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
       a2ensite -q default-ssl http-redirect
     else
       a2ensite -q default-ssl
+    fi
+
+    # Suppress cert verify warnings in test environments
+    if [[ "$DEPLOY_ENV" != "prod" && "$DEPLOY_ENV" != "staging" && "$DEPLOY_ENV" != "dev" ]]; then
+      export PYTHONWARNINGS="ignore:Unverified HTTPS request"
     fi
 
     # Update local CA certificate store based on what internal cert is being used

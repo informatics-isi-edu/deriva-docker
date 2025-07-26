@@ -1,11 +1,12 @@
 services:
   traefik:
-    container_name: deriva-rproxy
+    container_name: rproxy
     image: traefik:latest
     restart: no
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
       - "${HTTPS_PORT}:${HTTPS_PORT}"
+#      - "8080:8080" # for dashboard access
     networks:
       internal_network:
         ipv4_address: ${RPROXY_IP}
@@ -23,8 +24,7 @@ services:
       - certs:/certs:ro
       - ../certs:/certs-ext:ro
       - ./entrypoint.sh:/entrypoint.sh
-      - ./conf/traefik_tls_opts.yaml:/etc/traefik/config/traefik_tls_opts.yaml:ro
-      - ./conf/traefik_tls_certs.yaml.template:/etc/traefik/config/traefik_tls_certs.yaml.template:ro
+      - ./conf/:/etc/traefik/config
     entrypoint: ["/entrypoint.sh"]
     command:
 #      - "--log.level=debug"
@@ -37,7 +37,7 @@ services:
       - "--providers.file.directory=/etc/traefik/config"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.endpoint=tcp://deriva-rproxy-docker-proxy:2375"
+      - "--providers.docker.endpoint=tcp://docker-proxy:2375"
       - "--entrypoints.web.address=:${HTTP_PORT}"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
@@ -51,7 +51,7 @@ services:
     environment:
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
     volumes:
-      - ./conf/traefik_tls_opts.yaml:/etc/traefik/config/traefik_tls_opts.yaml:ro
+      - ./conf/:/etc/traefik/config:ro
       - ${LETSENCRYPT_CERTDIR}:/letsencrypt
     command:
 #      - "--log.level=debug"
@@ -64,7 +64,7 @@ services:
       - "--providers.file.directory=/etc/traefik/config"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.endpoint=tcp://deriva-rproxy-docker-proxy:2375"
+      - "--providers.docker.endpoint=tcp://docker-proxy:2375"
       - "--entrypoints.web.address=:${HTTP_PORT}"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
@@ -78,10 +78,11 @@ services:
   # Limit Traefik's access to the docker environment
   traefik-docker-proxy:
     image: lscr.io/linuxserver/socket-proxy:latest
-    container_name: deriva-rproxy-docker-proxy
+    container_name: docker-proxy
     environment:
       - CONTAINERS=1
       - POST=0
+      - LOG_LEVEL=warning
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     tmpfs:

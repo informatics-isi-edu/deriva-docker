@@ -1,0 +1,10 @@
+{
+  "email_service": {
+    "smtp_host": "email-smtp.us-west-2.amazonaws.com",
+    "smtp_port": 587,
+    "smtp_use_tls": true,
+    "smtp_use_ssl": false,
+    "smtp_from_email": "DERIVA Groups Management System <mdarcy@isi.edu>"
+  },
+  "email_service_secrets_file": "secrets/email_service_secrets.json"
+}
