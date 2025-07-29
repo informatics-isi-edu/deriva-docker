@@ -45,7 +45,7 @@ ENV VITE_API_BASE_PATH=$VITE_API_BASE_PATH
 ENV VITE_UI_BASE_PATH=$VITE_UI_BASE_PATH
 
 # Install dependencies and build the UI
-RUN yarn install --frozen-lockfile && yarn build
+RUN yarn config set network-timeout 300000 -g && yarn install --frozen-lockfile && yarn build
 
 # Final stage with nginx
 FROM nginx:alpine
