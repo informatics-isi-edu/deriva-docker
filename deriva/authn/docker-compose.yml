@@ -100,7 +100,7 @@ services:
     container_name: credenza-redis
     networks:
       - internal_network
-    entrypoint: ["/usr/local/bin/custom-entrypoint.sh"]
+    entrypoint: ["/usr/local/bin/redis-entrypoint.sh"]
     healthcheck:
       test: >
         sh -c 'redis-cli -a "$(tr -d "\n" < /run/secrets/credenza_db_password)" ping'
@@ -109,7 +109,7 @@ services:
       retries: 5
     volumes:
       - ./config/redis.conf.in:/usr/local/etc/redis/redis.conf.in:ro
-      - ./redis-entrypoint.sh:/usr/local/bin/custom-entrypoint.sh
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh
       - credenza_redis_data:/data
 
   credenza-redis-test:
