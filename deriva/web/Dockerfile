@@ -46,7 +46,7 @@ RUN apt-get install -y \
 
 # Install extra dependencies for frontend
 RUN apt-get install -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
     apt-get install -y nodejs ruby ruby-dev rubygems
 RUN gem install jekyll jekyll-paginate jekyll-scholar jekyll-seo-tag jekyll-redirect-from rdiscount
 

@@ -5,7 +5,6 @@ set -e
 # Default values
 ENV_TYPE=""
 OUTPUT_DIR="${HOME}/.deriva-docker/env"
-SECRETS_OUTPUT_DIR="../deriva/secrets"
 CUSTOM_HOSTNAME=""
 DECORATE_HOSTNAME="false"
 ENABLE_AUTH="false"
@@ -121,6 +120,7 @@ generate_env_file() {
   DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET=$(generate_random_string 32)
   DEFAULT_AUTHN_SESSION_HOST=$DEFAULT_HOSTNAME
   DEFAULT_AUTHN_SESSION_HOST_VERIFY=true
+  DEFAULT_SECRETS_DIR="${OUTPUT_DIR}/secrets"
   GRAFANA_USERNAME="deriva-admin"
   GRAFANA_PASSWORD="deriva-admin"
   POSTGRES_PASSWORD="postgres"
@@ -205,6 +205,7 @@ generate_env_file() {
   CREDENZA_DB_PASSWORD="${CREDENZA_DB_PASSWORD:-$DEFAULT_CREDENZA_DB_PASSWORD}"
   CREDENZA_ENCRYPTION_KEY="${CREDENZA_ENCRYPTION_KEY:-$DEFAULT_CREDENZA_ENCRYPTION_KEY}"
   KEYCLOAK_DERIVA_CLIENT_SECRET="${KEYCLOAK_DERIVA_CLIENT_SECRET:-$DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET}"
+  SECRETS_DIR="${SECRETS_DIR:-$DEFAULT_SECRETS_DIR}"
 
   # Build up the set of secret variables to emit to files
   SECRET_VARS=()
@@ -275,6 +276,9 @@ CREATE_TEST_USERS=$CREATE_TEST_USERS
 CREATE_TEST_DB=$CREATE_TEST_DB
 HATRAC_ADMIN_GROUP=$HATRAC_ADMIN_GROUP
 
+# Secrets
+SECRETS_DIR=$SECRETS_DIR
+
 EOF
   echo "🌐  Environment file '$ENV_FILE' has been created."
 }
@@ -338,9 +342,9 @@ if [[ "$ENV_TYPE" == "all" ]]; then
   DECORATE_HOSTNAME="true"
   for env in test dev staging prod; do
     generate_env_file "$env"
-    emit_envs_to_files "${SECRET_VARS[@]}" "${SECRETS_OUTPUT_DIR}/${env}"
+    emit_envs_to_files "${SECRET_VARS[@]}" "${SECRETS_DIR}/${env}"
   done
 else
   generate_env_file "$ENV_TYPE"
-  emit_envs_to_files "${SECRET_VARS[@]}" "${SECRETS_OUTPUT_DIR}/${ENV_TYPE}"
+  emit_envs_to_files "${SECRET_VARS[@]}" "${SECRETS_DIR}/${ENV_TYPE}"
 fi

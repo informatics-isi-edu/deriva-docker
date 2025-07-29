@@ -277,35 +277,35 @@
   secrets:
     # KeyCloak client secret - used in Keycloak config and Credenza config
     keycloak_deriva_client_secret_test:
-      file: secrets/test/keycloak_deriva_client_secret.txt
+      file: ${SECRETS_DIR}/test/keycloak_deriva_client_secret.txt
     keycloak_deriva_client_secret_dev:
-      file: secrets/dev/keycloak_deriva_client_secret.txt
+      file: ${SECRETS_DIR}/dev/keycloak_deriva_client_secret.txt
     keycloak_deriva_client_secret_staging:
-      file: secrets/staging/keycloak_deriva_client_secret.txt
+      file: ${SECRETS_DIR}/staging/keycloak_deriva_client_secret.txt
     keycloak_deriva_client_secret_prod:
-      file: secrets/prod/keycloak_deriva_client_secret.txt
+      file: ${SECRETS_DIR}/prod/keycloak_deriva_client_secret.txt
 
     # Credenza DB password, used in Redis (or other backends) and Credenza config
     credenza_db_password_test:
-      file: secrets/test/credenza_db_password.txt
+      file: ${SECRETS_DIR}/test/credenza_db_password.txt
     credenza_db_password_dev:
-      file: secrets/dev/credenza_db_password.txt
+      file: ${SECRETS_DIR}/dev/credenza_db_password.txt
     credenza_db_password_staging:
-      file: secrets/staging/credenza_db_password.txt
+      file: ${SECRETS_DIR}/staging/credenza_db_password.txt
     credenza_db_password_prod:
-      file: secrets/prod/credenza_db_password.txt
+      file: ${SECRETS_DIR}/prod/credenza_db_password.txt
     # Credenza encryption key
     credenza_encryption_key_test:
-      file: secrets/test/credenza_encryption_key.txt
+      file: ${SECRETS_DIR}/test/credenza_encryption_key.txt
     credenza_encryption_key_dev:
-      file: secrets/dev/credenza_encryption_key.txt
+      file: ${SECRETS_DIR}/dev/credenza_encryption_key.txt
     credenza_encryption_key_staging:
-      file: secrets/staging/credenza_encryption_key.txt
+      file: ${SECRETS_DIR}/staging/credenza_encryption_key.txt
     credenza_encryption_key_prod:
-      file: secrets/prod/credenza_encryption_key.txt
+      file: ${SECRETS_DIR}/prod/credenza_encryption_key.txt
     # Redis commander password - used only in test environments
     credenza_redis_commander_password_test:
-      file: secrets/test/credenza_redis_commander_password.txt
+      file: ${SECRETS_DIR}/test/credenza_redis_commander_password.txt
 
   networks:
     internal_network:
