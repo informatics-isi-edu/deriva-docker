@@ -109,7 +109,7 @@ services:
       retries: 5
     volumes:
       - ./config/redis.conf.in:/usr/local/etc/redis/redis.conf.in:ro
-      - ./redis-entrypoint.sh:/usr/local/bin/custom-entrypoint.sh:ro
+      - ./redis-entrypoint.sh:/usr/local/bin/custom-entrypoint.sh
       - credenza_redis_data:/data
 
   credenza-redis-test:
