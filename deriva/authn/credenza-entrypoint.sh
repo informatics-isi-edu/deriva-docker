@@ -13,6 +13,7 @@ fi
 inject_secret /run/secrets/keycloak_deriva_client_secret KEYCLOAK_DERIVA_CLIENT_SECRET
 
 # Emit keycloak_client_secret.json from env vars (if secret is defined)
+mkdir -p /credenza/secrets
 if [[ -n "$KEYCLOAK_DERIVA_CLIENT_SECRET" ]]; then
   if [[ ! -f /credenza/secrets/keycloak_client_secret.json ]]; then
     tmpfile=$(mktemp)

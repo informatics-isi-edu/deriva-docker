@@ -15,13 +15,11 @@ services:
         syslog-address: "tcp://${RSYSLOG_IP}"
         tag: "{{.Name}}"
     volumes:
-      - ./secrets:/credenza/secrets
       - ./credenza-entrypoint.sh:/credenza/entrypoint.sh
-      - ./config/credenza.env:/credenza/config/credenza.env:ro
-      - ./config/oidc_idp_profiles.json.in:/credenza/config/oidc_idp_profiles.json.in:ro
-#      - ./config-mount:/credenza/config # this can be uncommented to provide an externally mounted config override
+      - ./config:/credenza/config
+#      - ./secrets:/credenza/secrets:ro # this can be uncommented to provide an externally mounted secrets override
+#      - ./config-mount:/credenza/config:ro # this can be uncommented to provide an externally mounted config override
 #      - ./src/credenza:/credenza  # Optional for live code editing
-      - logs:/var/log/shared
     networks:
       - internal_network
     healthcheck:

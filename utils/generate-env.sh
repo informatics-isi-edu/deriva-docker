@@ -120,7 +120,6 @@ generate_env_file() {
   DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET=$(generate_random_string 32)
   DEFAULT_AUTHN_SESSION_HOST=$DEFAULT_HOSTNAME
   DEFAULT_AUTHN_SESSION_HOST_VERIFY=true
-  DEFAULT_SECRETS_DIR="${OUTPUT_DIR}/secrets"
   GRAFANA_USERNAME="deriva-admin"
   GRAFANA_PASSWORD="deriva-admin"
   POSTGRES_PASSWORD="postgres"
@@ -139,6 +138,8 @@ generate_env_file() {
   if [[ "$ORG_HOSTNAME" == "localhost" ]]; then
     HOSTNAME=$ORG_HOSTNAME
   fi
+
+  DEFAULT_SECRETS_DIR="${OUTPUT_DIR}/secrets/${SAFE_HOSTNAME}"
 
   # Apply shared logic for prod/staging/dev
   if [[ "$ENV" == "prod" || "$ENV" == "staging" || "$ENV" == "dev" ]]; then

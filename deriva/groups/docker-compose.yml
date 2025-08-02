@@ -23,8 +23,7 @@ services:
       - ./config/deriva_groups.env:/deriva-groups/config/deriva_groups.env:ro
       - ./config/groups_config.json:/deriva-groups/config/groups_config.json:ro
       - ./entrypoint.sh:/deriva-groups/entrypoint.sh
-      - logs:/var/log/shared
-      - deriva_groups:/deriva-groups
+      - deriva_groups:/deriva-groups/db
     networks:
       - internal_network
     healthcheck:
