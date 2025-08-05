@@ -67,9 +67,13 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
     echo "🔧   Deploying Deriva stack..."
     export ENV PIP_NO_CACHE_DIR=yes
 
-    # Configure ERMRest
+    # Configure ERMRest from template
     envsubst '${AUTHN_SESSION_HOST} ${AUTHN_SESSION_HOST_VERIFY}' < /home/ermrest/ermrest_config.json.in \
      > /home/ermrest/ermrest_config.json
+
+    # Configure Hatrac from template
+    envsubst '${AUTHN_SESSION_HOST} ${AUTHN_SESSION_HOST_VERIFY}' < /home/hatrac/hatrac_config.json.in \
+     > /home/hatrac/hatrac_config.json
 
     # Deal with possible alternate ports in webauthn ClientSessionCachedProxy config
     sed -i -E "s/(\"session_host\"\s*:\s*\"localhost:)[0-9]+(\")/\1${APACHE_HTTPS_PORT}\2/" /home/ermrest/ermrest_config.json

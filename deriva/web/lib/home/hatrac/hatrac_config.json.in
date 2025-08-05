@@ -8,6 +8,7 @@
   "403_html": "<html><body><h1>Access Forbidden</h1><p>%(message)s</p></body></html>",
   "401_html": "<html><body><h1>Authentication Required</h1><p>%(message)s</p></body></html>",
   "webauthn_proxy_config": {
-    "session_host": "localhost:443"
+      "session_host": "${AUTHN_SESSION_HOST}",
+      "session_https_verify": ${AUTHN_SESSION_HOST_VERIFY}
   }
 }
