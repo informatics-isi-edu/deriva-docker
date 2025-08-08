@@ -71,12 +71,12 @@ may not be deployed. Options for which compose profiles to use are set by `utils
 
 ### Setup Environment
 
-Use the provided `utils/generate_env.sh` script to generate one or more `.env` files. The `env` file is a set of parameters 
+Use the provided `utils/generate-env.sh` script to generate one or more `.env` files. The `env` file is a set of parameters 
 that are used to control both the composition (i.e., one or more Docker Compose profiles) of the container stack and certain 
 aspects of each container's runtime configuration.
 
 ```bash
-./utils/generate_env.sh
+./utils/generate-env.sh
 ```
 
 Invoked without arguments, the command above will generate an environment-specific `localhost.env` config file, located at `~/.deriva-docker/env/localhost.env`, using the 
