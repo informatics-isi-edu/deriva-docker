@@ -41,7 +41,7 @@ Options:
 
 Examples:
   $0 -e test -h localhost
-  $0 -e all -h mdarcy.at.derivacloud.net
+  $0 -e all -h test.at.derivacloud.net
   $0 --env dev --hostname myhost.local --email user@example.com --cert-dir ../../deriva-devops/tls/deriva-dev/certs/my-certdir
 
 EOF
@@ -171,6 +171,7 @@ generate_env_file() {
       THIRD_OCTET=3
       if  [[ "$ENABLE_AUTH" == "true" ]]; then
         COMPOSE_PROFILES+=",deriva-web-rproxy,deriva-auth,deriva-auth-dev,test"
+        ENABLE_KEYCLOAK="true"
         AUTHN_SESSION_HOST="rproxy"
         AUTHN_SESSION_HOST_VERIFY=false
         CREDENZA_REDIS_COMMANDER_PASSWORD="credenza-admin"
@@ -309,7 +310,7 @@ emit_envs_to_files() {
     local dest_path="${base_path}/${lower_name}.txt"
 
     if [[ -z "$value" ]]; then
-      echo "⚠️  Skipping unset or empty env var: $var_name"
+      echo "⚠️ Skipping unset or empty env var: $var_name"
       continue
     fi
 
@@ -322,6 +323,7 @@ emit_envs_to_files() {
 # Set default ENV_TYPE if not provided
 if [[ -z "$ENV_TYPE" ]]; then
     ENV_TYPE="test"
+    ENABLE_AUTH="true"
 fi
 
 # Validate environment type
