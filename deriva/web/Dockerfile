@@ -1,5 +1,5 @@
-# Base: Ubuntu 24.10
-FROM ubuntu:24.10
+# Base: Ubuntu 24.04 LTS
+FROM ubuntu:24.04
 
 # Set bash as the default shell
 SHELL ["/bin/bash", "-c"]
