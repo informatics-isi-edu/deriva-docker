@@ -714,12 +714,26 @@ END;
 EOF
 }
 
-isrd_insert_ermrest_registry()
-{
-      su -c "psql" - ermrest <<EOF
-INSERT INTO ermrest.registry(descriptor) VALUES ('{"type": "postgres", "dbname": "$1"}');
+isrd_insert_ermrest_registry() {
+    db="$1"
+    host="$2"
+
+    if [ -z "$db" ]; then
+        echo "usage: isrd_insert_ermrest_registry <dbname> [host]" >&2
+        return 2
+    fi
+
+    if [ -n "$host" ]; then
+        json=$(printf '{"type":"postgres","dbname":"%s","host":"%s"}' "$db" "$host")
+    else
+        json=$(printf '{"type":"postgres","dbname":"%s"}' "$db")
+    fi
+
+    su -c "psql" - ermrest <<EOF
+INSERT INTO ermrest.registry(descriptor) VALUES ('$json');
 EOF
 }
+
 
 ################ git tasks
 

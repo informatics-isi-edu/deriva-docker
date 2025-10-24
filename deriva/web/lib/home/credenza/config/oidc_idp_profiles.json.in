@@ -1,0 +1,34 @@
+{
+  "keycloak": {
+    "discovery_url": "${KEYCLOAK_BASE_URL}/.well-known/openid-configuration",
+    "scopes": "openid email profile",
+    "client_secret_file": "secrets/keycloak_client_secret.json"
+  },
+  "cognito": {
+    "discovery_url": "${COGNITO_BASE_URL}/.well-known/openid-configuration",
+    "scopes": "openid email profile",
+    "request_offline_access_scope_in_device_flow": false,
+    "logout_url_params": {
+       "client_id": "${COGNITO_CLIENT_ID}",
+       "logout_uri": "https://${CONTAINER_HOSTNAME}"
+    },
+    "client_secret_file": "secrets/cognito_client_secret.json"
+  },
+  "okta": {
+    "discovery_url": "${OKTA_BASE_URL}/.well-known/openid-configuration",
+    "scopes": "openid email profile groups",
+    "client_secret_file": "secrets/okta_client_secret.json"
+  },
+  "globus": {
+    "discovery_url": "https://auth.globus.org/.well-known/openid-configuration",
+    "introspect_url": "https://auth.globus.org/v2/oauth2/token/introspect",
+    "logout_url": "https://auth.globus.org/v2/web/logout",
+    "logout_url_params": {
+      "redirect_uri": "https://${CONTAINER_HOSTNAME}",
+      "redirect_name": "homepage."
+    },
+    "scopes": "openid email profile urn:globus:auth:scope:groups.api.globus.org:view_my_groups_and_memberships https://auth.globus.org/scopes/identifiers.fair-research.org/writer",
+    "session_augmentation_provider": "credenza.api.session.augmentation.globus_provider:GlobusSessionAugmentationProvider",
+    "client_secret_file": "secrets/globus_client_secret.json"
+  }
+}

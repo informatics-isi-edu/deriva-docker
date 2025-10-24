@@ -1,6 +1,7 @@
 {
   "realm": "deriva",
   "enabled": true,
+  "accessTokenLifespan": 1500,
   "clients": [
     {
       "clientId": "deriva-client",

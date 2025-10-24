@@ -52,18 +52,11 @@
             the rest of the system may or may not be fully configured yet.</p>
 
         <div class="links">
-            <p><a href="/ermrest/">Test ERMrest</a></p>
-            <p><a href="/chaise/recordset/#1/Data:Collection@sort(RID)">Sample Catalog</a>Must be installed</p>
-            <p><a href="/monitoring/dashboards">Monitoring UI</a>Monitoring container(s) must be running</p>
-            <script>
-                document.write('<p><a href="' + location.protocol + '//' + location.hostname +
-                    ':3000" target="_blank">' + 'Monitoring UI (no reverse proxy)</a>' +
-                    'Monitoring container(s) must be running with UI server exposed on port 3000</p>');
-            </script>
-            <p><a href="/authn/login">🔐  Alternate OIDC Login</a>
-                (Keycloak and Credenza containers must be running)</p>
-            <p><a href="/authn/logout">↩️  Alternate OIDC Logout</a>
-                (Keycloak and Credenza containers must be running)</p>
+            <p><a href="/ermrest/">🔧  Test ERMrest</a></p>
+            <p><a href="/chaise/recordset/#1/Data:Collection@sort(RID)">🛢️  Sample Catalog</a>Must be installed</p>
+            <p><a href="/monitoring/dashboards">📊  Monitoring UI</a></p>
+            <p><a href="/authn/login">🔐  OIDC Login</a></p>
+            <p><a id="oidc-logout" href="/authn/logout">↩️  OIDC Logout</a></p>
             <p><a href="/authn/session">🧑‍💻  User Session Information</a></p>
             <p><a href="/auth/admin/master/console/#/deriva">⚙️  Manage Keycloak realm</a>
                 (Keycloak container must be running)</p>
@@ -72,3 +65,42 @@
     </div>
 </body>
 </html>
+
+<script>
+document.addEventListener('click', function (e) {
+  const link = e.target.closest('a#oidc-logout');
+  if (!link) return;
+
+  // Let modified clicks behave normally (new tab, etc.)
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+  e.preventDefault();
+
+  const href = link.href;
+
+  fetch(href, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Accept': 'application/json' }
+  }).then(async (res) => {
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+
+    if (res.ok && ct.includes('application/json')) {
+      try {
+        const data = await res.json();
+        if (data && typeof data.logout_url === 'string' && data.logout_url) {
+          // Follow the OP's logout URL
+          window.location.assign(data.logout_url);
+          return;
+        }
+      } catch (_) { /* fall through to normal nav */ }
+    }
+
+    // Not 200 JSON, or missing logout_url → behave like a normal link
+    window.location.assign(href);
+  }).catch(() => {
+    // Network error → behave like a normal link
+    window.location.assign(href);
+  });
+});
+</script>

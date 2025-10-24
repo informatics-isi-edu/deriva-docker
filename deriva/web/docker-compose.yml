@@ -21,7 +21,6 @@ services:
       - home:/home
       - www:/var/www
       - certs:/certs
-      - pg_socket:/var/run/postgresql
       - ./entrypoint.sh:/deriva/web/entrypoint.sh
       - ../certs:/certs-ext:ro
     environment:
@@ -34,11 +33,28 @@ services:
       - KEY_FILENAME=${KEY_FILENAME}
       - CA_FILENAME=${CA_FILENAME}
       - CERT_DIR=${CERT_DIR}
-      - CREATE_TEST_USERS=${CREATE_TEST_USERS}
       - CREATE_TEST_DB=${CREATE_TEST_DB}
+      - ERMREST_ADMIN_GROUP=${ERMREST_ADMIN_GROUP}
       - HATRAC_ADMIN_GROUP=${HATRAC_ADMIN_GROUP}
-      - AUTHN_SESSION_HOST=${AUTHN_SESSION_HOST}
-      - AUTHN_SESSION_HOST_VERIFY=${AUTHN_SESSION_HOST_VERIFY}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - CREDENZA_DEFAULT_REALM=${CREDENZA_DEFAULT_REALM}
+      - CREDENZA_DB_BACKEND=${CREDENZA_DB_BACKEND}
+      - CREDENZA_DB_USER=${CREDENZA_DB_USER}
+      - CREDENZA_DB_HOST=${CREDENZA_DB_HOST}
+      - CREDENZA_DB_PORT=${CREDENZA_DB_PORT}
+      - CREDENZA_DEBUG=${CREDENZA_DEBUG}
+      - KEYCLOAK_BASE_URL=${KEYCLOAK_BASE_URL}
+    secrets:
+      - postgres_password
+      - postgres_ermrest_password
+      - postgres_hatrac_password
+      - postgres_deriva_password
+      - postgres_webauthn_password
+      - postgres_credenza_password
+      - keycloak_deriva_client_secret
+      - credenza_db_password
+      - credenza_encryption_key
     healthcheck:
       test: [ "CMD", "curl", "-fk", "https://localhost:${HTTPS_PORT}/healthcheck.txt" ]
       interval: 15s

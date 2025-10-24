@@ -1,8 +1,6 @@
-FROM deriva/base AS deriva-base
-
 FROM python:3.13-slim AS core
 
-COPY --from=deriva-base /usr/local/lib/*.sh /usr/local/lib/
+COPY --from=isrddev/deriva-base:latest /usr/local/lib/*.sh /usr/local/lib/
 
 RUN apt-get update && apt-get install -y \
     git curl rsyslog libsystemd0 --no-install-recommends \

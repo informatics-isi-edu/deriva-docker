@@ -7,7 +7,7 @@ ENV_TYPE=""
 OUTPUT_DIR="${HOME}/.deriva-docker/env"
 CUSTOM_HOSTNAME=""
 DECORATE_HOSTNAME="false"
-ENABLE_AUTH="false"
+ENABLE_CREDENZA_REDIS="false"
 ENABLE_KEYCLOAK="false"
 ENABLE_GROUPS="false"
 ENABLE_DDNS="false"
@@ -24,20 +24,20 @@ Usage: $0 [OPTIONS]
 Generate a DERIVA environment configuration file for use with docker-compose.
 
 Options:
-  --env, -e ENV             Environment type (required): basic | test | dev | staging | prod | core | all
-  --output-dir DIR          Output directory for generated env file (default: ~/.deriva-docker/env)
-  --hostname, -h NAME       Custom hostname (optional)
-  --decorate-hostname, -d   Prepend the environment name to the hostname (e.g. dev-myhost), automatic when using "-e all", except for "localhost"
-  --enable-auth, -a         Enable Credenza authentication broker containers
-  --enable-keycloak, -k     Enable KeyCloak IDP containers
-  --enable-groups, -g       Enable Deriva Groups containers
-  --enable-ddns,            Enable DDNS refresh
-  --email EMAIL             Let's Encrypt email address (required for dev, staging, prod)
-  --cert-filename FILE      Certificate filename (optional)
-  --key-filename FILE       Private key filename (optional)
-  --ca-filename FILE        CA certificate filename (optional)
-  --cert-dir DIR            Certificate base directory (optional)
-  --help, -?                Show this help message and exit
+  --env, -e ENV                 Environment type (required): test | dev | staging | prod | all
+  --output-dir DIR              Output directory for generated env file (default: ~/.deriva-docker/env)
+  --hostname, -h NAME           Custom hostname (optional)
+  --decorate-hostname, -d       Prepend the environment name to the hostname (e.g. dev-myhost), automatic when using "-e all", except for "localhost"
+  --enable-credenza-redis, -r   Enable Redis backend for Credenza authentication broker
+  --enable-keycloak, -k         Enable KeyCloak IDP container
+  --enable-groups, -g           Enable Deriva Groups containers
+  --enable-ddns,                Enable DDNS refresh
+  --email EMAIL                 Let's Encrypt email address (required for dev, staging, prod)
+  --cert-filename FILE          Certificate filename (optional)
+  --key-filename FILE           Private key filename (optional)
+  --ca-filename FILE            CA certificate filename (optional)
+  --cert-dir DIR                Certificate base directory (optional)
+  --help, -?                    Show this help message and exit
 
 Examples:
   $0 -e test -h localhost
@@ -57,10 +57,11 @@ while [[ $# -gt 0 ]]; do
       if [[ -n "$2" && ! "$2" =~ ^- ]]; then CUSTOM_HOSTNAME="$2"; shift 2
       else print_help; exit 0; fi ;;
     --decorate-hostname|-d) DECORATE_HOSTNAME="true"; shift ;;
-    --enable-auth|-a) ENABLE_AUTH="true"; shift ;;
+    --enable-credenza-redis|-r) ENABLE_CREDENZA_REDIS="true"; shift ;;
     --enable-keycloak|-k) ENABLE_KEYCLOAK="true"; shift ;;
     --enable-groups|-g) ENABLE_GROUPS="true"; shift ;;
     --enable-ddns) ENABLE_DDNS="true"; shift ;;
+    --ermrest-admin-group) ERMREST_ADMIN_GROUP="$2"; shift 2 ;;
     --hatrac-admin-group) HATRAC_ADMIN_GROUP="$2"; shift 2 ;;
     --email) LETSENCRYPT_EMAIL="$2"; shift 2 ;;
     --cert-filename) CERT_FILENAME="$2"; shift 2 ;;
@@ -118,14 +119,29 @@ generate_env_file() {
   DEFAULT_LETSENCRYPT_CERTDIR="\${HOME}/.deriva-docker/certs/\${CONTAINER_HOSTNAME}/letsencrypt"
   DEFAULT_CREDENZA_ENCRYPTION_KEY=$(generate_random_string 24)
   DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET=$(generate_random_string 32)
-  DEFAULT_AUTHN_SESSION_HOST=$DEFAULT_HOSTNAME
-  DEFAULT_AUTHN_SESSION_HOST_VERIFY=true
+  DEFAULT_KEYCLOAK_BASE_URL="http://keycloak:8080/auth/realms/deriva"
   GRAFANA_USERNAME="deriva-admin"
   GRAFANA_PASSWORD="deriva-admin"
+  POSTGRES_HOST="deriva-postgres"
+  POSTGRES_USER="postgres"
   POSTGRES_PASSWORD="postgres"
+  POSTGRES_ERMREST_PASSWORD="ermrest"
+  POSTGRES_HATRAC_PASSWORD="hatrac"
+  POSTGRES_WEBAUTHN_PASSWORD="webauthn"
+  POSTGRES_DERIVA_PASSWORD="deriva"
+  CREDENZA_DEFAULT_REALM="keycloak"
+  CREDENZA_DEBUG="false"
+  CREDENZA_DB_USER="credenza"
   CREDENZA_DB_PASSWORD="credenza"
+  CREDENZA_DB_BACKEND_REDIS="redis"
+  CREDENZA_DB_HOST_REDIS="credenza-redis"
+  CREDENZA_DB_PORT_REDIS="6379/0"
+  CREDENZA_DB_BACKEND_POSTGRES="postgresql"
+  CREDENZA_DB_HOST_POSTGRES=${POSTGRES_HOST}
+  CREDENZA_DB_PORT_POSTGRES="5432"
+
+  DEFAULT_ERMREST_ADMIN_GROUP="admin"
   DEFAULT_HATRAC_ADMIN_GROUP="admin"
-  CREATE_TEST_USERS=false
   CREATE_TEST_DB=false
   COMPOSE_PROFILES=deriva-base,deriva-monitoring-base,deriva-monitoring-rproxy
 
@@ -143,15 +159,18 @@ generate_env_file() {
 
   # Apply shared logic for prod/staging/dev
   if [[ "$ENV" == "prod" || "$ENV" == "staging" || "$ENV" == "dev" ]]; then
-    if  [[ "$ENABLE_AUTH" == "true" ]]; then
-      COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt,deriva-auth"
-      CREDENZA_DB_PASSWORD=$(generate_random_string)
+    if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
+      COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt,credenza-redis"
     else
       COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt"
     fi
     POSTGRES_PASSWORD=$(generate_random_string)
+    POSTGRES_ERMREST_PASSWORD=$(generate_random_string)
+    POSTGRES_HATRAC_PASSWORD=$(generate_random_string)
+    POSTGRES_WEBAUTHN_PASSWORD=$(generate_random_string)
+    POSTGRES_DERIVA_PASSWORD=$(generate_random_string)
+    CREDENZA_DB_PASSWORD=$(generate_random_string)
     GRAFANA_PASSWORD=$(generate_random_string)
-    DEFAULT_HATRAC_ADMIN_GROUP="https://auth.globus.org/3938e0d0-ed35-11e5-8641-22000ab4b42b"
   fi
 
   case "$ENV" in
@@ -169,21 +188,28 @@ generate_env_file() {
       ;;
     test)
       THIRD_OCTET=3
-      if  [[ "$ENABLE_AUTH" == "true" ]]; then
-        COMPOSE_PROFILES+=",deriva-web-rproxy,deriva-auth,deriva-auth-dev,test"
-        ENABLE_KEYCLOAK="true"
-        AUTHN_SESSION_HOST="rproxy"
-        AUTHN_SESSION_HOST_VERIFY=false
+      ENABLE_KEYCLOAK="true"
+      if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
+        COMPOSE_PROFILES+=",deriva-web-rproxy,credenza-redis,credenza-redis-dev,test"
         CREDENZA_REDIS_COMMANDER_PASSWORD="credenza-admin"
       else
         COMPOSE_PROFILES+=",deriva-web-rproxy,test"
       fi
-      CREATE_TEST_USERS=true
       CREATE_TEST_DB=true
       ;;
   esac
 
-  [[ "$ENABLE_KEYCLOAK" == "true" && "$ENABLE_AUTH" == "true" ]] && COMPOSE_PROFILES+=",deriva-auth-keycloak"
+  if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
+    CREDENZA_DB_BACKEND=${CREDENZA_DB_BACKEND_REDIS}
+    CREDENZA_DB_HOST=${CREDENZA_DB_HOST_REDIS}
+    CREDENZA_DB_PORT=${CREDENZA_DB_PORT_REDIS}
+  else
+    CREDENZA_DB_BACKEND=${CREDENZA_DB_BACKEND_POSTGRES}
+    CREDENZA_DB_HOST=${CREDENZA_DB_HOST_POSTGRES}
+    CREDENZA_DB_PORT=${CREDENZA_DB_PORT_POSTGRES}
+  fi
+
+  [[ "$ENABLE_KEYCLOAK" == "true" ]] && COMPOSE_PROFILES+=",deriva-auth-keycloak"
   [[ "$ENABLE_GROUPS" == "true" ]] && COMPOSE_PROFILES+=",deriva-groups"
   [[ "$ENABLE_DDNS" == "true" ]] && COMPOSE_PROFILES+=",ddns-update"
 
@@ -201,11 +227,11 @@ generate_env_file() {
   CA_FILENAME="${CA_FILENAME:-$DEFAULT_CA_FILENAME}"
   LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL:-$DEFAULT_LETSENCRYPT_EMAIL}"
   LETSENCRYPT_CERTDIR="${LETSENCRYPT_CERTDIR:-$DEFAULT_LETSENCRYPT_CERTDIR}"
+  ERMREST_ADMIN_GROUP="${HATRAC_ERMREST_GROUP:-$DEFAULT_ERMREST_ADMIN_GROUP}"
   HATRAC_ADMIN_GROUP="${HATRAC_ADMIN_GROUP:-$DEFAULT_HATRAC_ADMIN_GROUP}"
-  AUTHN_SESSION_HOST="${AUTHN_SESSION_HOST:-$DEFAULT_AUTHN_SESSION_HOST}"
-  AUTHN_SESSION_HOST_VERIFY="${AUTHN_SESSION_HOST_VERIFY:-$DEFAULT_AUTHN_SESSION_HOST_VERIFY}"
   CREDENZA_DB_PASSWORD="${CREDENZA_DB_PASSWORD:-$DEFAULT_CREDENZA_DB_PASSWORD}"
   CREDENZA_ENCRYPTION_KEY="${CREDENZA_ENCRYPTION_KEY:-$DEFAULT_CREDENZA_ENCRYPTION_KEY}"
+  KEYCLOAK_BASE_URL="${KEYCLOAK_BASE_URL:-$DEFAULT_KEYCLOAK_BASE_URL}"
   KEYCLOAK_DERIVA_CLIENT_SECRET="${KEYCLOAK_DERIVA_CLIENT_SECRET:-$DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET}"
   SECRETS_DIR="${SECRETS_DIR:-$DEFAULT_SECRETS_DIR}"
 
@@ -213,19 +239,18 @@ generate_env_file() {
   SECRET_VARS=()
   # Always include core secrets
   SECRET_VARS+=(
-    GRAFANA_PASSWORD
     POSTGRES_PASSWORD
+    POSTGRES_ERMREST_PASSWORD
+    POSTGRES_HATRAC_PASSWORD
+    POSTGRES_WEBAUTHN_PASSWORD
+    POSTGRES_DERIVA_PASSWORD
+    CREDENZA_DB_PASSWORD
+    CREDENZA_ENCRYPTION_KEY
+    GRAFANA_PASSWORD
   )
-  # Auth secrets
-  if  [[ "$ENABLE_AUTH" == "true" ]]; then
-    SECRET_VARS+=(
-      CREDENZA_DB_PASSWORD
-      CREDENZA_ENCRYPTION_KEY
-    )
-    [[ "$ENV" == "test" ]] && SECRET_VARS+=(CREDENZA_REDIS_COMMANDER_PASSWORD)
-  fi
+  [[ "$ENV" == "test" && "$ENABLE_CREDENZA_REDIS" == "true" ]] && SECRET_VARS+=(CREDENZA_REDIS_COMMANDER_PASSWORD)
   # Keycloak secrets
-  if [[ "$ENABLE_KEYCLOAK" == "true" && "$ENABLE_AUTH" == "true" ]]; then
+  if [[ "$ENABLE_KEYCLOAK" == "true" ]]; then
     SECRET_VARS+=(
       KEYCLOAK_DERIVA_CLIENT_SECRET
     )
@@ -238,48 +263,54 @@ generate_env_file() {
 # Auto-generated $(date)
 
 # Compose
-COMPOSE_PROFILES=$COMPOSE_PROFILES
-COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME
+COMPOSE_PROFILES=${COMPOSE_PROFILES}
+COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 
 # General
-DEPLOY_ENV=$ENV
-CONTAINER_HOSTNAME=$HOSTNAME
-LETSENCRYPT_EMAIL=$LETSENCRYPT_EMAIL
-LETSENCRYPT_CERTDIR=$LETSENCRYPT_CERTDIR
+DEPLOY_ENV=${ENV}
+CONTAINER_HOSTNAME=${HOSTNAME}
+LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+LETSENCRYPT_CERTDIR=${LETSENCRYPT_CERTDIR}
 
 # Networking
-HTTP_PORT=$HTTP_PORT
-HTTPS_PORT=$HTTPS_PORT
-SUBNET=$SUBNET
-GATEWAY=$GATEWAY
-RSYSLOG_IP=$RSYSLOG_IP
-RPROXY_IP=$RPROXY_IP
+HTTP_PORT=${HTTP_PORT}
+HTTPS_PORT=${HTTPS_PORT}
+SUBNET=${SUBNET}
+GATEWAY=${GATEWAY}
+RSYSLOG_IP=${RSYSLOG_IP}
+RPROXY_IP=${RPROXY_IP}
 
 # SSL Certificates
-CERT_FILENAME=$CERT_FILENAME
-KEY_FILENAME=$KEY_FILENAME
-CA_FILENAME=$CA_FILENAME
-CERT_DIR=$CERT_DIR
+CERT_FILENAME=${CERT_FILENAME}
+KEY_FILENAME=${KEY_FILENAME}
+CA_FILENAME=${CA_FILENAME}
+CERT_DIR=${CERT_DIR}
 
 # Auth
-AUTHN_SESSION_HOST=$AUTHN_SESSION_HOST
-AUTHN_SESSION_HOST_VERIFY=$AUTHN_SESSION_HOST_VERIFY
+CREDENZA_DEFAULT_REALM=${CREDENZA_DEFAULT_REALM}
+CREDENZA_DB_BACKEND=${CREDENZA_DB_BACKEND}
+CREDENZA_DB_USER=${CREDENZA_DB_USER}
+CREDENZA_DB_HOST=${CREDENZA_DB_HOST}
+CREDENZA_DB_PORT=${CREDENZA_DB_PORT}
+CREDENZA_DEBUG=${CREDENZA_DEBUG}
 KEYCLOAK_IP=${KEYCLOAK_IP}
+KEYCLOAK_BASE_URL=${KEYCLOAK_BASE_URL}
 
 # Database
-POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+POSTGRES_HOST=${POSTGRES_HOST}
+POSTGRES_USER=${POSTGRES_USER}
 
 # Monitoring
-GRAFANA_USERNAME=$GRAFANA_USERNAME
-GRAFANA_PASSWORD=$GRAFANA_PASSWORD
+GRAFANA_USERNAME=${GRAFANA_USERNAME}
+GRAFANA_PASSWORD=${GRAFANA_PASSWORD}
 
 # DERIVA
-CREATE_TEST_USERS=$CREATE_TEST_USERS
-CREATE_TEST_DB=$CREATE_TEST_DB
-HATRAC_ADMIN_GROUP=$HATRAC_ADMIN_GROUP
+CREATE_TEST_DB=${CREATE_TEST_DB}
+ERMREST_ADMIN_GROUP=${ERMREST_ADMIN_GROUP}
+HATRAC_ADMIN_GROUP=${HATRAC_ADMIN_GROUP}
 
 # Secrets
-SECRETS_DIR=$SECRETS_DIR
+SECRETS_DIR=${SECRETS_DIR}/${ENV}
 
 EOF
   echo "🌐  Environment file '$ENV_FILE' has been created."
@@ -323,7 +354,6 @@ emit_envs_to_files() {
 # Set default ENV_TYPE if not provided
 if [[ -z "$ENV_TYPE" ]]; then
     ENV_TYPE="test"
-    ENABLE_AUTH="true"
 fi
 
 # Validate environment type

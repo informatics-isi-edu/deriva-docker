@@ -1,6 +1,0 @@
-FROM analogj:docker-cron
-
-
-
-
-

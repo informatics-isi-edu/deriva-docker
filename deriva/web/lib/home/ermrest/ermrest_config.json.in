@@ -1,22 +1,21 @@
 {
     "registry": {
         "type": "postgres",
-        "dsn": "dbname=ermrest",
+        "dsn": "dbname=ermrest host=${POSTGRES_HOST}",
         "acls": {
             "create_catalog_permit": [
-                "admin",
-                "https://auth.globus.org/176baec4-ed26-11e5-8e88-22000ab4b42b",
-                "https://auth.globus.org/3938e0d0-ed35-11e5-8641-22000ab4b42b"
+                "${ERMREST_ADMIN_GROUP}"
             ]
         }
     },
 
     "catalog_factory": {
         "type": "postgres",
-        "dsn": "dbname=ermrest",
+        "dsn": "dbname=ermrest host=${POSTGRES_HOST}",
         "_comment": "Postgres template params are based on libpq args (e.g., host, user, password)]",
         "template": {
             "type": "postgres",
+            "host": "${POSTGRES_HOST}",
             "dbname": "PROVIDED BY FACTORY"
         }
     },
@@ -67,14 +66,13 @@
 
     "change_notification": {
         "AMQP": {
-            "connection": {"host": "deriva-queue"},
+            "connection": {"host": "deriva-rabbitmq"},
             "exchange": "ermrest_changes",
             "routing_key": ""
         }
     },
     "webauthn_proxy_config": {
-        "session_host": "${AUTHN_SESSION_HOST}",
-        "session_https_verify": ${AUTHN_SESSION_HOST_VERIFY}
+        "session_host": "localhost"
     },
     "textfacet_policy": false,
     "require_primary_keys": true,

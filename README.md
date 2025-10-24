@@ -1,7 +1,9 @@
 
 # Containerized DERIVA 
 
-This project provides a fully containerized deployment of the [DERIVA platform](https://www.isi.edu/isr/research-areas/the-deriva-platform/), including core web services, database, message broker, logging, and monitoring — all orchestrated using Docker Compose.
+This project provides a fully containerized deployment of the [DERIVA platform](https://www.isi.edu/isr/research-areas/the-deriva-platform/), including core web services, database, message broker, logging, and monitoring — all orchestrated using Docker Compose. 
+
+#### IMPORTANT NOTE: This is unsupported BETA software and is not intended for production use.
 
 ---
 
@@ -28,24 +30,23 @@ This project provides a fully containerized deployment of the [DERIVA platform](
 
 ## Container Instance Details
 
-| Container             | Description                                                       |
-|-----------------------|-------------------------------------------------------------------|
-| **Apache (HTTPD)**    | HTTPD serving DERIVA WSGI apps                                    |
-| **Credenza**          | OIDC Authentication Broker Web Service                            |
-| **Keycloak**          | A preconfigured KeyCloak IDP for use with Credenza                |
-| **DERIVA Groups**     | DERIVA Group Management Web Service                               |
-| **PostgreSQL**        | Metadata and relational data store                                |
-| **RabbitMQ**          | Message broker for event notification                             |
-| **Rsyslog**           | Container-based system logging                                    |
-| **Traefik**           | TLS-enabled reverse proxy with optional Let's Encrypt integration |
-| **Socket Proxy**      | Restricts Docker socket access for Traefik                        |
-| **Prometheus**        | Metrics collection for services                                   |
-| **Node Exporter**     | Exports host system metrics to Prometheus                         |
-| **Apache Exporter**   | Exports Apache metrics to Prometheus                              |
-| **Postgres Exporter** | Exports Postgres metrics to Prometheus                            |
-| **Grafana**           | Dashboards for monitoring metrics and logs                        |
-| **Loki**              | Centralized log aggregation                                       |
-| **Promtail**          | Tails and ships log information to Loki                           |
+| Container             | Description                                                         |
+|-----------------------|---------------------------------------------------------------------|
+| **Apache (HTTPD)**    | HTTPD serving DERIVA WSGI apps                                      |
+| **Keycloak**          | A preconfigured KeyCloak IDP for use with the Credenza Authn Broker |
+| **DERIVA Groups**     | DERIVA Group Management Web Service (Alpha)                         |
+| **PostgreSQL**        | Metadata and relational data store                                  |
+| **RabbitMQ**          | Message broker for event notification                               |
+| **Rsyslog**           | Container-based system logging                                      |
+| **Traefik**           | TLS-enabled reverse proxy with optional Let's Encrypt integration   |
+| **Socket Proxy**      | Restricts Docker socket access for Traefik                          |
+| **Grafana**           | Dashboards for monitoring metrics and logs                          |
+| **Prometheus**        | Metrics collection for services                                     |
+| **Node Exporter**     | Exports host system metrics to Prometheus                           |
+| **Apache Exporter**   | Exports Apache metrics to Prometheus                                |
+| **Postgres Exporter** | Exports Postgres metrics to Prometheus                              |
+| **Loki**              | Centralized log aggregation                                         |
+| **Promtail**          | Tails and ships log information to Loki                             |
 
 #### Note: 
 
@@ -80,8 +81,7 @@ aspects of each container's runtime configuration.
 ```
 
 Invoked without arguments, the command above will generate an environment-specific `localhost.env` config file, located at `~/.deriva-docker/env/localhost.env`, using the 
-`test` environment profile. This profile includes the entire container stack, including test users (using the `webauthn` database provider) and a 
-test catalog #1 running under the hostname `localhost`.
+`test` environment profile. This profile includes the entire container stack, including test users and a test catalog #1 running under the hostname `localhost`.
 
 ##### User credentials (Test profile):
 
@@ -92,8 +92,8 @@ test catalog #1 running under the hostname `localhost`.
 
 
 ### Add the `deriva/certs/deriva-dev-ca.crt` CA certificate to your OS trust store. 
-This step is recommended (but functionally optional) when running the container stack on `localhost`, as the container stack will use a 
-certificate issued by the DERIVA DevOps `deriva-dev` certificate authority. Installing the CA certificate will avoid browser 
+This step is recommended (but functionally optional) when running the container stack on `localhost`. The container stack will use a 
+certificate issued by the DERIVA DevOps `deriva-dev` certificate authority. Installing this CA certificate will avoid browser 
 certificate invalidity warnings for certificates issued by this CA.
 
 #### Linux (Debian/Ubuntu):
@@ -124,14 +124,9 @@ The following `docker` commands are meant to be executed from the Docker Compose
 cd deriva
 ```
 
-#### Build the `deriva:base` image:
-
-```bash
-docker build -t deriva/base .
-```
-
 #### Start the Stack:
-
+Note that on first launch the following command will cause the stack to be built, which includes downloading all 
+dependency images. This can take a while depending on the host system environment and network speed.
 ```bash
 docker compose --env-file ~/.deriva-docker/env/localhost.env up
 ```
@@ -167,7 +162,7 @@ Note that deleting the volume mounts will destroy any persistent state that has 
 
 Configure TLS settings via the `CERT_FILENAME`, `KEY_FILENAME`, `CERT_DIR`, `CA_FILENAME` and `LETSENCRYPT_EMAIL` variables &#40;as appropriate&#41; in the environment file.
 
-See the TLS [configuration guide](docs/TLS-config.md) for more information.
+See the TLS [configuration guide (WIP)](docs/TLS-config.md) for more information.
 
 ---
 
