@@ -1,0 +1,60 @@
+services:
+  # Redis backend container for Credenza
+  credenza-redis:
+    image: redis:7-alpine
+    container_name: credenza-redis
+    depends_on:
+      logging:
+        condition: service_healthy
+    secrets:
+      - credenza_db_password
+    volumes:
+      - ./config/redis.conf.in:/usr/local/etc/redis/redis.conf.in:ro
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh
+      - credenza_redis_data:/data
+    networks:
+      - internal_network
+    entrypoint: ["/usr/local/bin/redis-entrypoint.sh"]
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+    healthcheck:
+      test: >
+        sh -c 'redis-cli -a "$(tr -d "\n" < /run/secrets/credenza_db_password)" ping'
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  credenza-redis-commander:
+    image: ghcr.io/joeferner/redis-commander:latest
+    container_name: credenza-redis-commander
+    depends_on:
+      rproxy:
+        condition: service_started
+      credenza-redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=credenza-redis
+      - REDIS_PORT=6379
+      - REDIS_USERNAME=credenza
+      - REDIS_PASSWORD_FILE=/run/secrets/credenza_db_password
+      - HTTP_USER=credenza-admin
+      - HTTP_PASSWORD_FILE=/run/secrets/credenza_redis_commander_password
+    secrets:
+      - credenza_db_password
+      - credenza_redis_commander_password
+    networks:
+      - internal_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis-commander.rule=Host(`${CONTAINER_HOSTNAME}`) && PathPrefix(`/redis`)"
+      - "traefik.http.routers.redis-commander.entrypoints=websecure"
+      - "traefik.http.routers.redis-commander.tls=true"
+      - "traefik.http.routers.redis-commander.tls.options=mintls13@file"
+      - "traefik.http.routers.redis-commander.service=redis-commander"
+      - "traefik.http.routers.redis-commander.priority=50"
+      - "traefik.http.routers.redis-commander.middlewares=redis-commander-stripprefix"
+      - "traefik.http.middlewares.redis-commander-stripprefix.stripPrefix.prefixes=/redis"
+      - "traefik.http.services.redis-commander.loadbalancer.server.port=8081"

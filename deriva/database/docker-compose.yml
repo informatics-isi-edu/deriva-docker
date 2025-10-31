@@ -1,7 +1,7 @@
 services:
   postgres:
-    build: .
-    container_name: deriva-database
+    image: postgres:16.10
+    container_name: deriva-postgres
     depends_on:
       logging:
         condition: service_healthy
@@ -14,20 +14,15 @@ services:
         syslog-address: "tcp://${RSYSLOG_IP}"
         tag: "{{.Name}}"
     volumes:
-      - pg_socket:/var/run/postgresql
       - pg_data:/var/lib/postgresql/data
       - ./postgresql.conf:/deriva/database/postgresql.conf
-      - ./pg_hba.conf:/deriva/database/pg_hba.conf
-      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     environment:
-      - DERIVA_POSTGRES_USERS=webauthn,ermrest,hatrac,deriva
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
     healthcheck:
       test: ["CMD-SHELL", "su - postgres -c 'pg_isready -U postgres'"]
       interval: 5s
       timeout: 5s
       retries: 6
-    command: ["postgres",
-              "-c", "config_file=/deriva/database/postgresql.conf",
-              "-c", "hba_file=/deriva/database/pg_hba.conf"]
+    command: ["postgres", "-c", "config_file=/deriva/database/postgresql.conf"]

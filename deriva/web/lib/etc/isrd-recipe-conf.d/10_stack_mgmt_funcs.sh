@@ -11,6 +11,7 @@ www_install()
 isrd_prepare_repos()
 {
     git_clone_idempotent webauthn.git
+    git_clone_idempotent credenza.git
     git_clone_idempotent ermrest.git
     git_clone_idempotent hatrac.git
     git_clone_idempotent ermresolve.git
@@ -29,7 +30,8 @@ isrd_prepare_repos()
 
 isrd_install_code()
 {
-    isrddev_repo_run webauthn   make install
+    isrddev_repo_run webauthn   make install-core
+    isrddev_repo_run credenza   make install
     isrddev_repo_run ermrest    pip3 install .
     isrddev_repo_run hatrac     pip3 install .
     isrddev_repo_run ermresolve pip3 install .
@@ -44,6 +46,10 @@ isrd_install_code()
 
     # fixup se-linux context problems seen on some fedora 34 VMs...
     restorecon -rv ${ISRD_PYLIBDIR}
+
+    # clean up a bit to keep footprint small
+    isrddev_repo_run chaise make distclean
+    isrddev_repo_run ermrestjs make distclean
 }
 
 isrd_deploy_services()
@@ -52,12 +58,13 @@ isrd_deploy_services()
     require id ermrest
     require id hatrac
     require id ermresolve
+    require id credenza
 
     require [ -r /home/ermrest/ermrest_config.json ]
     require [ -r /home/hatrac/hatrac_config.json ]
     require [ -r /home/ermresolve/ermresolve_config.json ]
 
-    isrddev_repo_run webauthn   make deploy
+    isrddev_repo_run webauthn   make deploy-core
     if grep -q "Ubuntu" /etc/os-release; then
         isrddev_repo_run ermrest make deploy PLATFORM=ubuntu1604
     else
@@ -73,10 +80,13 @@ isrd_deploy_services()
       isrddev_repo_run hatrac make deploy-full
     fi
 
+    isrddev_repo_run credenza make deploy
+
     restorecon -rv /home/webauthn
     restorecon -rv /home/ermrest
     restorecon -rv /home/ermresolve
     restorecon -rv /home/hatrac
+    restorecon -rv /home/credenza
 }
 
 

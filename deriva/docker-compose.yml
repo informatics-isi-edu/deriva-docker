@@ -18,12 +18,6 @@
       extends:
         file: queue/docker-compose.yml
         service: rabbitmq
-    web:
-      profiles:
-        - deriva-web
-      extends:
-        file: web/docker-compose.yml
-        service: apache-external
     web-rproxy:
       profiles:
         - deriva-web-rproxy
@@ -70,81 +64,19 @@
         file: rproxy/docker-compose.yml
         service: traefik-docker-proxy
 
-    # DERIVA Auth services
-    credenza-test:
+    # Credenza REDIS backend services
+    credenza-redis:
       profiles:
-        - deriva-auth, test
+        - credenza-redis
       extends:
-        file: authn/docker-compose.yml
-        service: credenza-test
-      depends_on:
-        credenza-redis-test:
-          condition: service_healthy
-      restart: no
-    credenza-dev:
-      profiles:
-        - deriva-auth, dev
-      extends:
-        file: authn/docker-compose.yml
-        service: credenza-dev
-      depends_on:
-        credenza-redis-dev:
-          condition: service_healthy
-      restart: no
-    credenza-staging:
-      profiles:
-        - deriva-auth, staging
-      extends:
-        file: authn/docker-compose.yml
-        service: credenza-staging
-      depends_on:
-        credenza-redis-staging:
-          condition: service_healthy
-      restart: no
-    credenza-prod:
-      profiles:
-        - deriva-auth, prod
-      extends:
-        file: authn/docker-compose.yml
-        service: credenza-prod
-      depends_on:
-        credenza-redis-prod:
-          condition: service_healthy
-      restart: no
-    credenza-redis-test:
-      profiles:
-        - deriva-auth, test
-      extends:
-        file: authn/docker-compose.yml
-        service: credenza-redis-test
+        file: redis/docker-compose.yml
+        service: credenza-redis
       restart: unless-stopped
-    credenza-redis-dev:
-      profiles:
-        - deriva-auth, dev
-      extends:
-        file: authn/docker-compose.yml
-        service: credenza-redis-dev
-      restart: unless-stopped
-    credenza-redis-staging:
-      profiles:
-        - deriva-auth, staging
-      extends:
-        file: authn/docker-compose.yml
-        service: credenza-redis-staging
-      restart: unless-stopped
-    credenza-redis-prod:
-      profiles:
-        - deriva-auth, prod
-      extends:
-        file: authn/docker-compose.yml
-        service: credenza-redis-prod
-      restart: unless-stopped
-
     credenza-redis-commander:
       profiles:
-        - deriva-auth-dev, test
+        - credenza-redis-dev
       extends:
-        file: authn/docker-compose.yml
+        file: redis/docker-compose.yml
         service: credenza-redis-commander
       restart: no
 
@@ -216,30 +148,14 @@
         service: postgres_exporter
 
     # KeyCloak IDP
-    keycloak-test:
+    keycloak:
       profiles:
-        - deriva-auth-keycloak, test
+        - deriva-auth-keycloak
       extends:
         file: keycloak/docker-compose.yml
-        service: keycloak-test
-    keycloak-dev:
-      profiles:
-        - deriva-auth-keycloak, dev
-      extends:
-        file: keycloak/docker-compose.yml
-        service: keycloak-dev
-    keycloak-staging:
-      profiles:
-        - deriva-auth-keycloak, staging
-      extends:
-        file: keycloak/docker-compose.yml
-        service: keycloak-staging
-    keycloak-prod:
-      profiles:
-        - deriva-auth-keycloak, prod
-      extends:
-        file: keycloak/docker-compose.yml
-        service: keycloak-prod
+        service: keycloak
+      secrets:
+        - keycloak_deriva_client_secret
 
     # DDNS Automatic Updater
     ddns-updater:
@@ -254,7 +170,6 @@
     www:          # Webserver data
     home:         # Webserver home dirs (source code, service configs and secrets)
     pg_data:      # Postgres data
-    pg_socket:    # Postgres unix socket
     queue:        # RabbitMQ data
     logs:         # Rsyslog logs
 
@@ -275,37 +190,33 @@
     keycloak_data:
 
   secrets:
+    # Postgres secrets - includes Postgres password and individual Deriva service database passwords
+    postgres_password:
+      file: ${SECRETS_DIR}/postgres_password.txt
+    postgres_ermrest_password:
+      file: ${SECRETS_DIR}/postgres_ermrest_password.txt
+    postgres_hatrac_password:
+      file: ${SECRETS_DIR}/postgres_hatrac_password.txt
+    postgres_deriva_password:
+      file: ${SECRETS_DIR}/postgres_deriva_password.txt
+    postgres_webauthn_password:
+      file: ${SECRETS_DIR}/postgres_webauthn_password.txt
+    postgres_credenza_password:
+      file: ${SECRETS_DIR}/credenza_db_password.txt
+
     # KeyCloak client secret - used in Keycloak config and Credenza config
-    keycloak_deriva_client_secret_test:
-      file: ${SECRETS_DIR}/test/keycloak_deriva_client_secret.txt
-    keycloak_deriva_client_secret_dev:
-      file: ${SECRETS_DIR}/dev/keycloak_deriva_client_secret.txt
-    keycloak_deriva_client_secret_staging:
-      file: ${SECRETS_DIR}/staging/keycloak_deriva_client_secret.txt
-    keycloak_deriva_client_secret_prod:
-      file: ${SECRETS_DIR}/prod/keycloak_deriva_client_secret.txt
+    keycloak_deriva_client_secret:
+      file: ${SECRETS_DIR}/keycloak_deriva_client_secret.txt
 
     # Credenza DB password, used in Redis (or other backends) and Credenza config
-    credenza_db_password_test:
-      file: ${SECRETS_DIR}/test/credenza_db_password.txt
-    credenza_db_password_dev:
-      file: ${SECRETS_DIR}/dev/credenza_db_password.txt
-    credenza_db_password_staging:
-      file: ${SECRETS_DIR}/staging/credenza_db_password.txt
-    credenza_db_password_prod:
-      file: ${SECRETS_DIR}/prod/credenza_db_password.txt
+    credenza_db_password:
+      file: ${SECRETS_DIR}/credenza_db_password.txt
     # Credenza encryption key
-    credenza_encryption_key_test:
-      file: ${SECRETS_DIR}/test/credenza_encryption_key.txt
-    credenza_encryption_key_dev:
-      file: ${SECRETS_DIR}/dev/credenza_encryption_key.txt
-    credenza_encryption_key_staging:
-      file: ${SECRETS_DIR}/staging/credenza_encryption_key.txt
-    credenza_encryption_key_prod:
-      file: ${SECRETS_DIR}/prod/credenza_encryption_key.txt
-    # Redis commander password - used only in test environments
-    credenza_redis_commander_password_test:
-      file: ${SECRETS_DIR}/test/credenza_redis_commander_password.txt
+    credenza_encryption_key:
+      file: ${SECRETS_DIR}/credenza_encryption_key.txt
+    # Redis commander password - used only in test environments with Redis backend
+    credenza_redis_commander_password:
+      file: ${SECRETS_DIR}/credenza_redis_commander_password.txt
 
   networks:
     internal_network:

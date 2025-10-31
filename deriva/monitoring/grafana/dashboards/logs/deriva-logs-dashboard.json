@@ -10,19 +10,19 @@
   "panels": [
     {
       "type": "logs",
-      "title": "deriva-webserver",
+      "title": "credenza",
       "datasource": {
         "type": "loki",
         "uid": "loki"
       },
       "targets": [
         {
-          "expr": "{log=\"deriva-webserver\"}",
+          "expr": "{log=\"credenza\"}",
           "refId": "A"
         }
       ],
       "gridPos": {
-        "h": 9,
+        "h": 5,
         "w": 24,
         "x": 0,
         "y": 0
@@ -35,51 +35,24 @@
         "dedupStrategy": "none"
       }
     },
-        {
+    {
       "type": "logs",
-      "title": "deriva-webserver: apache_ssl_error",
+      "title": "credenza-audit",
       "datasource": {
         "type": "loki",
         "uid": "loki"
       },
       "targets": [
         {
-          "expr": "{log=\"apache_ssl_error\"}",
+          "expr": "{log=\"credenza-audit\"}",
           "refId": "A"
         }
       ],
       "gridPos": {
-        "h": 9,
+        "h": 5,
         "w": 24,
         "x": 0,
         "y": 1
-      },
-      "options": {
-        "showLabels": false,
-        "showTime": true,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": true,
-        "dedupStrategy": "none"
-      }
-    },
-    {
-      "type": "logs",
-      "title": "deriva-webserver: apache_ssl_access",
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "expr": "{log=\"apache_ssl_access\"}",
-          "refId": "A"
-        }
-      ],
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 2
       },
       "options": {
         "showLabels": false,
@@ -106,7 +79,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 2
       },
       "options": {
         "showLabels": false,
@@ -118,14 +91,14 @@
     },
     {
       "type": "logs",
-      "title": "deriva-webserver: webauthn",
+      "title": "deriva-webserver: apache_ssl_error",
       "datasource": {
         "type": "loki",
         "uid": "loki"
       },
       "targets": [
         {
-          "expr": "{log=\"webauthn\"}",
+          "expr": "{log=\"apache_ssl_error\"}",
           "refId": "A"
         }
       ],
@@ -133,7 +106,34 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 3
+      },
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "type": "logs",
+      "title": "deriva-webserver: apache_ssl_access",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "{log=\"apache_ssl_access\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 4
       },
       "options": {
         "showLabels": false,
@@ -160,7 +160,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 5
       },
       "options": {
         "showLabels": false,
@@ -187,61 +187,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 8
-      },
-      "options": {
-        "showLabels": false,
-        "showTime": true,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": true,
-        "dedupStrategy": "none"
-      }
-    },
-    {
-      "type": "logs",
-      "title": "credenza",
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "expr": "{log=\"credenza\"}",
-          "refId": "A"
-        }
-      ],
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "options": {
-        "showLabels": false,
-        "showTime": true,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": true,
-        "dedupStrategy": "none"
-      }
-    },
-    {
-      "type": "logs",
-      "title": "credenza-audit",
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "expr": "{log=\"credenza-audit\"}",
-          "refId": "A"
-        }
-      ],
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 10
+        "y": 6
       },
       "options": {
         "showLabels": false,
@@ -268,7 +214,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 7
       },
       "options": {
         "showLabels": false,
@@ -295,7 +241,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 8
       },
       "options": {
         "showLabels": false,
@@ -307,14 +253,14 @@
     },
     {
       "type": "logs",
-      "title": "deriva-database",
+      "title": "deriva-postgres",
       "datasource": {
         "type": "loki",
         "uid": "loki"
       },
       "targets": [
         {
-          "expr": "{log=\"deriva-database\"}",
+          "expr": "{log=\"deriva-postgres\"}",
           "refId": "A"
         }
       ],
@@ -322,7 +268,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 9
       },
       "options": {
         "showLabels": false,
@@ -334,7 +280,7 @@
     },
     {
       "type": "logs",
-      "title": "deriva-queue",
+      "title": "deriva-rabbitmq",
       "id": 9,
       "datasource": {
         "type": "loki",
@@ -342,7 +288,7 @@
       },
       "targets": [
         {
-          "expr": "{log=\"deriva-queue\"}",
+          "expr": "{log=\"deriva-rabbitmq\"}",
           "refId": "A"
         }
       ],
@@ -350,7 +296,34 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 10
+      },
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "type": "logs",
+      "title": "deriva-webserver",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "{log=\"deriva-webserver\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 11
       },
       "options": {
         "showLabels": false,

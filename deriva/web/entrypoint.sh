@@ -10,6 +10,7 @@ fi
 exec rsyslogd -n &
 
 . /usr/local/sbin/isrd-recipe-lib.sh
+. /usr/local/lib/utils.sh
 
 CERT_PATH="/certs-ext/${CERT_DIR}/${CERT_FILENAME}"
 KEY_PATH="/certs-ext/${CERT_DIR}/${KEY_FILENAME}"
@@ -67,25 +68,110 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
     echo "🔧   Deploying Deriva stack..."
     export ENV PIP_NO_CACHE_DIR=yes
 
-    # Configure ERMRest from template
-    envsubst '${AUTHN_SESSION_HOST} ${AUTHN_SESSION_HOST_VERIFY}' < /home/ermrest/ermrest_config.json.in \
-     > /home/ermrest/ermrest_config.json
+    # Inject required secrets into environment
+    inject_secret run/secrets/postgres_password POSTGRES_PASSWORD
+    inject_secret run/secrets/postgres_ermrest_password POSTGRES_ERMREST_PASSWORD
+    inject_secret run/secrets/postgres_hatrac_password POSTGRES_HATRAC_PASSWORD
+    inject_secret run/secrets/postgres_deriva_password POSTGRES_DERIVA_PASSWORD
+    inject_secret run/secrets/postgres_webauthn_password POSTGRES_WEBAUTHN_PASSWORD
+    inject_secret run/secrets/postgres_credenza_password POSTGRES_CREDENZA_PASSWORD
 
-    # Configure Hatrac from template
-    envsubst '${AUTHN_SESSION_HOST} ${AUTHN_SESSION_HOST_VERIFY}' < /home/hatrac/hatrac_config.json.in \
-     > /home/hatrac/hatrac_config.json
+    # Configure Postgres user account and connection
+    if require_envs POSTGRES_HOST POSTGRES_USER POSTGRES_PASSWORD; then
+      substitute_env_vars "/home/postgres/.bash_profile.in" "/home/postgres/.bash_profile" '${POSTGRES_HOST}'
+      substitute_env_vars "/home/postgres/.pgpass.in" "/home/postgres/.pgpass" \
+       '${POSTGRES_HOST} ${POSTGRES_USER} ${POSTGRES_PASSWORD}'
+      chown postgres:postgres /home/postgres/.*
+      chmod 0600 /home/postgres/.pgpass
+    else
+      exit 1
+    fi
+
+    # Create DERIVA Postgres DB roles via postgres user
+    sudo -iu postgres env \
+     POSTGRES_ERMREST_PASSWORD=${POSTGRES_ERMREST_PASSWORD} \
+     POSTGRES_HATRAC_PASSWORD=${POSTGRES_HATRAC_PASSWORD} \
+     POSTGRES_WEBAUTHN_PASSWORD=${POSTGRES_WEBAUTHN_PASSWORD} \
+     POSTGRES_DERIVA_PASSWORD=${POSTGRES_DERIVA_PASSWORD} \
+     POSTGRES_CREDENZA_PASSWORD=${POSTGRES_CREDENZA_PASSWORD} \
+     "create-db-roles.sh"
+
+    # Configure ERMRest
+    substitute_env_vars "/home/ermrest/ermrest_config.json.in" \
+     "/home/ermrest/ermrest_config.json" \
+      '${POSTGRES_HOST} ${ERMREST_ADMIN_GROUP} ${AUTHN_SESSION_HOST} ${AUTHN_SESSION_HOST_VERIFY}'
+    substitute_env_vars "/home/ermrest/.bash_profile.in" "/home/ermrest/.bash_profile" '${POSTGRES_HOST}'
+    substitute_env_vars "/home/ermrest/.pgpass.in" "/home/ermrest/.pgpass" \
+     '${POSTGRES_HOST} ${POSTGRES_ERMREST_PASSWORD}'
+    chown ermrest /home/ermrest/.*
+    chmod 0600 /home/ermrest/.pgpass
+
+    # Configure Hatrac
+    substitute_env_vars "/home/hatrac/hatrac_config.json.in" "/home/hatrac/hatrac_config.json" \
+     '${POSTGRES_HOST} ${AUTHN_SESSION_HOST} ${AUTHN_SESSION_HOST_VERIFY}'
+    substitute_env_vars "/home/hatrac/.bash_profile.in" "/home/hatrac/.bash_profile" '${POSTGRES_HOST}'
+    substitute_env_vars "/home/hatrac/.pgpass.in" "/home/hatrac/.pgpass" \
+     '${POSTGRES_HOST} ${POSTGRES_HATRAC_PASSWORD}'
+    chown hatrac /home/hatrac/.*
+    chmod 0600 /home/hatrac/.pgpass
+
+    # Configure Webauthn -> Postgres connection (temp until webauthn removed from build)
+    substitute_env_vars "/home/webauthn/webauthn2_config.json.in" "/home/webauthn/webauthn2_config.json" \
+     '${POSTGRES_HOST} ${POSTGRES_WEBAUTHN_PASSWORD}'
+
+    # Configure Credenza
+    mkdir -p /home/credenza/secrets
+    chown credenza /home/credenza/secrets
+    inject_secret run/secrets/credenza_db_password CREDENZA_DB_PASSWORD
+    inject_secret /run/secrets/credenza_encryption_key CREDENZA_ENCRYPTION_KEY
+    inject_secret run/secrets/keycloak_deriva_client_secret KEYCLOAK_CLIENT_SECRET
+    if require_envs KEYCLOAK_CLIENT_SECRET; then
+      export CLIENT_ID=${KEYCLOAK_CLIENT_ID:-"deriva-client"} CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      CLIENT_SECRET_FILE_IN="/home/credenza/config/template_client_secret.json.in"
+      CLIENT_SECRET_FILE_OUT="/home/credenza/secrets/keycloak_client_secret.json"
+      substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
+       '${CLIENT_ID} ${CLIENT_SECRET}'
+    fi
+    if require_envs OKTA_CLIENT_ID OKTA_CLIENT_SECRET; then
+      export CLIENT_ID=${OKTA_CLIENT_ID} CLIENT_SECRET=${OKTA_CLIENT_SECRET}
+      CLIENT_SECRET_FILE_IN="/home/credenza/config/template_client_secret.json.in"
+      CLIENT_SECRET_FILE_OUT="/home/credenza/secrets/okta_client_secret.json"
+      substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
+       '${CLIENT_ID} ${CLIENT_SECRET}'
+    fi
+    if require_envs COGNITO_CLIENT_ID COGNITO_CLIENT_SECRET COGNITO_NATIVE_CLIENT_ID; then
+      export CLIENT_ID=${COGNITO_CLIENT_ID} CLIENT_SECRET=${COGNITO_CLIENT_SECRET} NATIVE_CLIENT_ID=${COGNITO_NATIVE_CLIENT_ID}
+      CLIENT_SECRET_FILE_IN="/home/credenza/config/template_client_secret_native.json.in"
+      CLIENT_SECRET_FILE_OUT="/home/credenza/secrets/cognito_client_secret.json"
+      substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
+       '${CLIENT_ID} ${CLIENT_SECRET} ${NATIVE_CLIENT_ID}'
+    fi
+    if require_envs GLOBUS_CLIENT_ID GLOBUS_CLIENT_SECRET GLOBUS_NATIVE_CLIENT_ID; then
+      export CLIENT_ID=${GLOBUS_CLIENT_ID} CLIENT_SECRET=${GLOBUS_CLIENT_SECRET} NATIVE_CLIENT_ID=${GLOBUS_NATIVE_CLIENT_ID}
+      CLIENT_SECRET_FILE_IN="/home/credenza/config/template_client_secret_native.json.in"
+      CLIENT_SECRET_FILE_OUT="/home/credenza/secrets/globus_client_secret.json"
+      substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
+       '${CLIENT_ID} ${CLIENT_SECRET} ${NATIVE_CLIENT_ID}'
+    fi
+    substitute_env_vars "/home/credenza/config/oidc_idp_profiles.json.in" \
+     "/home/credenza/config/oidc_idp_profiles.json"
+
+    su - postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='credenza'\"" | grep -q 1 \
+     || su - postgres -c "createdb -O credenza credenza"
 
     # Deal with possible alternate ports in webauthn ClientSessionCachedProxy config
-    sed -i -E "s/(\"session_host\"\s*:\s*\"localhost:)[0-9]+(\")/\1${APACHE_HTTPS_PORT}\2/" /home/ermrest/ermrest_config.json
-    sed -i -E "s/(\"session_host\"\s*:\s*\"localhost:)[0-9]+(\")/\1${APACHE_HTTPS_PORT}\2/" /home/hatrac/hatrac_config.json
+    sed -i -E "s/(\"session_host\"\s*:\s*\"localhost:)[0-9]+(\")/\1${APACHE_HTTPS_PORT}\2/" \
+     /home/ermrest/ermrest_config.json
+    sed -i -E "s/(\"session_host\"\s*:\s*\"localhost:)[0-9]+(\")/\1${APACHE_HTTPS_PORT}\2/" \
+     /home/hatrac/hatrac_config.json
     isrd-stack-mgmt.sh deploy
     isrd_fixup_permissions /var/www
 
     # Configure Apache vhost ports
-    envsubst '${APACHE_HTTP_PORT} ${APACHE_HTTPS_PORT}' < /etc/apache2/sites-available/http-redirect.conf.template \
-     > /etc/apache2/sites-available/http-redirect.conf
-    envsubst '${APACHE_HTTPS_PORT}' < /etc/apache2/sites-available/default-ssl.conf.template \
-     > /etc/apache2/sites-available/default-ssl.conf
+    substitute_env_vars /etc/apache2/sites-available/http-redirect.conf.template \
+     /etc/apache2/sites-available/http-redirect.conf '${APACHE_HTTP_PORT} ${APACHE_HTTPS_PORT}'
+    substitute_env_vars /etc/apache2/sites-available/default-ssl.conf.template \
+     /etc/apache2/sites-available/default-ssl.conf '${APACHE_HTTPS_PORT}'
     # Also need to replace Listen 80 and 443 lines in /etc/apache2/ports.conf to match vhosts entries
     sed -i \
       -e "s/^\s*Listen\s\+80\b/Listen ${APACHE_HTTP_PORT}/" \
@@ -112,10 +198,6 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
         update-ca-certificates
     fi
 
-    # Disable legacy mod_webauthn
-    a2dismod -q webauthn
-    rm -f /etc/apache2/conf.d/webauthn.conf
-
     touch "$DEPLOYMENT_MARKER_FILE"
     echo "✅   Deriva software deployment complete."
 else
@@ -125,21 +207,12 @@ fi
 TESTENV_MARKER_FILE="/home/isrddev/.testenv-deployed"
 if [ ! -f "$TESTENV_MARKER_FILE" ]; then
 
-    if [[ "$CREATE_TEST_USERS" == "true" ]]; then
-      echo "🔧   Creating test users..."
-      sudo -H -u webauthn webauthn2-manage adduser deriva-admin
-      sudo -H -u webauthn webauthn2-manage passwd deriva-admin deriva-admin
-      sudo -H -u webauthn webauthn2-manage addattr admin
-      sudo -H -u webauthn webauthn2-manage assign deriva-admin admin
-      sudo -H -u webauthn webauthn2-manage adduser deriva
-      sudo -H -u webauthn webauthn2-manage passwd deriva deriva
-    fi
-
     if [[ "$CREATE_TEST_DB" == "true" ]]; then
       echo "🔧   Restoring test catalog..."
       dbname="${TEST_DBNAME:-"_ermrest_catalog_1"}"
-      isrd_restore_db ermrest ermrest "${dbname}" "/var/tmp/${dbname}.sql.gz"
-      isrd_insert_ermrest_registry "${dbname}"
+      su - postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='${dbname}'\"" | grep -q 1 \
+       || isrd_restore_db ermrest ermrest "${dbname}" "/var/tmp/${dbname}.sql.gz" && \
+        isrd_insert_ermrest_registry "${dbname}" "${POSTGRES_HOST}"
     fi
 
     touch "$TESTENV_MARKER_FILE"
@@ -151,7 +224,4 @@ fi
 # Suppress cert verify warnings for 'localhost', generated by inter-service communication when cert verify is disabled
 export PYTHONWARNINGS="ignore:Unverified HTTPS request is being made to host 'localhost'."
 
-source /etc/apache2/envvars
-exec apache2 -DFOREGROUND
-
-
+exec apache2ctl -D FOREGROUND

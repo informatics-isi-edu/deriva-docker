@@ -1,11 +1,9 @@
-FROM deriva/base AS deriva-base
-
 FROM quay.io/keycloak/keycloak:latest
 
 USER root
 
 # Copy shared library scripts
-COPY --from=deriva-base /usr/local/lib/*.sh /usr/local/lib/
+COPY --from=isrddev/deriva-base:latest /usr/local/lib/*.sh /usr/local/lib/
 
 # Copy entrypoint script and template
 COPY config/realm-export.json.in /opt/realm-export.json.in

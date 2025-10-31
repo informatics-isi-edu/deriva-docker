@@ -4,7 +4,7 @@ set -e
 source /usr/local/lib/utils.sh
 
 # Inject secret from file into env var
-inject_secret run/secrets/keycloak_deriva_client_secret* KEYCLOAK_DERIVA_CLIENT_SECRET
+inject_secret run/secrets/keycloak_deriva_client_secret KEYCLOAK_DERIVA_CLIENT_SECRET
 
 # Ensure target directory exists
 mkdir -p /opt/keycloak/data/import/
