@@ -30,23 +30,23 @@ This project provides a fully containerized deployment of the [DERIVA platform](
 
 ## Container Instance Details
 
-| Container             | Description                                                         |
-|-----------------------|---------------------------------------------------------------------|
-| **Apache (HTTPD)**    | HTTPD serving DERIVA WSGI apps                                      |
-| **Keycloak**          | A preconfigured KeyCloak IDP for use with the Credenza Authn Broker |
-| **DERIVA Groups**     | DERIVA Group Management Web Service (Alpha)                         |
-| **PostgreSQL**        | Metadata and relational data store                                  |
-| **RabbitMQ**          | Message broker for event notification                               |
-| **Rsyslog**           | Container-based system logging                                      |
-| **Traefik**           | TLS-enabled reverse proxy with optional Let's Encrypt integration   |
-| **Socket Proxy**      | Restricts Docker socket access for Traefik                          |
-| **Grafana**           | Dashboards for monitoring metrics and logs                          |
-| **Prometheus**        | Metrics collection for services                                     |
-| **Node Exporter**     | Exports host system metrics to Prometheus                           |
-| **Apache Exporter**   | Exports Apache metrics to Prometheus                                |
-| **Postgres Exporter** | Exports Postgres metrics to Prometheus                              |
-| **Loki**              | Centralized log aggregation                                         |
-| **Promtail**          | Tails and ships log information to Loki                             |
+| Container             | Description                                                                     |
+|-----------------------|---------------------------------------------------------------------------------|
+| **Apache (HTTPD)**    | HTTPD serving DERIVA WSGI apps                                                  |
+| **Keycloak**          | A preconfigured KeyCloak IDP for use with the Credenza Authn Broker             |
+| **DERIVA Groups**     | DERIVA Group Management Web Service (Alpha) - Optional, not deployed by default |
+| **PostgreSQL**        | Metadata and relational data store                                              |
+| **RabbitMQ**          | Message broker for event notification                                           |
+| **Rsyslog**           | Container-based system logging                                                  |
+| **Traefik**           | TLS-enabled reverse proxy with optional Let's Encrypt integration               |
+| **Socket Proxy**      | Restricts Docker socket access for Traefik                                      |
+| **Grafana**           | Dashboards for monitoring metrics and logs                                      |
+| **Prometheus**        | Metrics collection for services                                                 |
+| **Node Exporter**     | Exports host system metrics to Prometheus                                       |
+| **Apache Exporter**   | Exports Apache metrics to Prometheus                                            |
+| **Postgres Exporter** | Exports Postgres metrics to Prometheus                                          |
+| **Loki**              | Centralized log aggregation                                                     |
+| **Promtail**          | Tails and ships log information to Loki                                         |
 
 #### Note: 
 

@@ -77,7 +77,7 @@ services:
       - RPROXY_IP=${RPROXY_IP}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.apache.rule=Host(`${CONTAINER_HOSTNAME}`)"
+      - "traefik.http.routers.apache.rule=Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)"
       - "traefik.http.routers.apache.entrypoints=websecure"
       - "traefik.http.routers.apache.tls=true"
       - "traefik.http.routers.apache.tls.options=mintls13@file"
