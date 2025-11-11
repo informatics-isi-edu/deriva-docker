@@ -9,9 +9,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     TERM=xterm-256color
 
 # minimal OS deps
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      tini ca-certificates curl rsync bash git jq \
-    && rm -rf /var/lib/apt/lists/*
+COPY packages.apt /tmp/packages.apt
+RUN apt-get update && \
+    xargs -a /tmp/packages.apt apt-get install -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 # COPY deriva-dev CA cert
 COPY --from=certs deriva-dev-ca.crt /usr/local/share/ca-certificates/deriva-dev-ca.crt
@@ -39,7 +40,9 @@ RUN mkdir -p "$HOME/venvs" \
  && uv venv "$APP_VENV" \
  && uv pip install -U \
       --python "$APP_VENV/bin/python" \
-      -r /tmp/requirements.txt
+      --no-cache-dir --no-compile \
+      -r /tmp/requirements.txt \
+ && rm -rf ~/.cache/uv ~/.cache/pip
 
 # make it default for shells & kernels
 ENV VIRTUAL_ENV="$APP_VENV"
