@@ -1,7 +1,7 @@
+# Containerized DERIVA
 
-# Containerized DERIVA 
-
-This project provides a fully containerized deployment of the [DERIVA platform](https://www.isi.edu/isr/research-areas/the-deriva-platform/), including core web services, database, message broker, logging, and monitoring — all orchestrated using Docker Compose. 
+This project provides a fully containerized deployment of the [DERIVA platform](https://www.isi.edu/isr/research-areas/the-deriva-platform/), including core web services, 
+database, message broker, logging, and monitoring — all orchestrated using Docker Compose.
 
 #### IMPORTANT NOTE: This is unsupported BETA software and is not intended for production use.
 
@@ -11,44 +11,55 @@ This project provides a fully containerized deployment of the [DERIVA platform](
 
 ![DERIVA Architecture](docs/DERIVA-Container-Architecture-Docker.svg)
 
-**Overview**  
-- **Web Stack** 
-  - Includes individual containers for Apache HTTPD (serving DERIVA Flask/WSGI apps), PostgreSQL, RabbitMQ, and centralized **rsyslog** logging.  
-- **Monitoring Stack** 
-  - Uses multiple containers to aggregate metrics (via Prometheus and exporters) and logs (via Promtail and Loki), all visualized through Grafana Web UI.  
-- **Traefik Reverse Proxy** 
-  - Securely routes external HTTPS traffic to internal services via path-based routing.
-  - Supports both static and dynamic (via via LetsEncrypt) TLS certificate configuration.
-  - Traefik’s access to Docker API is restricted to read-only via a specialized Docker Socket Proxy container.  
-- **Internal Networking** 
-  - Isolates service communication within Docker, exposing only controlled endpoints via Traefik. 
-  - Inter-container communication is handled via a combination of Unix sockets, TCP, and shared access to specific filesystem volumes.  
-- **Security** 
-  - Is enforced through single-container external port exposure (via Traefik reverse proxy, HTTPS-only), automated TLS certificates, restricted Docker API access, and private internal-only service ports.
+**Overview**
+
+- **Web Stack**
+    - Includes individual containers for Apache HTTPD (serving DERIVA Flask/WSGI apps), PostgreSQL, RabbitMQ, and
+      centralized **rsyslog** logging.
+- **Monitoring Stack**
+    - Uses multiple containers to aggregate metrics (via Prometheus and exporters) and logs (via Promtail and Loki), all
+      visualized through Grafana Web UI.
+- **Jupyter Stack (Optional)**
+    - Includes JupyterHub and a plugable, pre-configured Docker-spawned Jupyter Server image that can be used for
+      programmatically interacting and experimenting with the web stack.
+- **Traefik Reverse Proxy**
+    - Securely routes external HTTPS traffic to internal services via path-based routing.
+    - Supports both static and dynamic (via via LetsEncrypt) TLS certificate configuration.
+    - Traefik’s access to Docker API is restricted to read-only via a specialized Docker Socket Proxy container.
+- **Internal Networking**
+    - Isolates service communication within Docker, exposing only controlled endpoints via Traefik.
+    - Inter-container communication is handled via a combination of Unix sockets, TCP, and shared access to specific
+      filesystem volumes.
+- **Security**
+    - Is enforced through single-container external port exposure (via Traefik reverse proxy, HTTPS-only), automated TLS
+      certificates, restricted Docker API access, and private internal-only service ports.
 
 ---
 
 ## Container Instance Details
 
-| Container             | Description                                                                     |
-|-----------------------|---------------------------------------------------------------------------------|
-| **Apache (HTTPD)**    | HTTPD serving DERIVA WSGI apps                                                  |
-| **Keycloak**          | A preconfigured KeyCloak IDP for use with the Credenza Authn Broker             |
-| **DERIVA Groups**     | DERIVA Group Management Web Service (Alpha) - Optional, not deployed by default |
-| **PostgreSQL**        | Metadata and relational data store                                              |
-| **RabbitMQ**          | Message broker for event notification                                           |
-| **Rsyslog**           | Container-based system logging                                                  |
-| **Traefik**           | TLS-enabled reverse proxy with optional Let's Encrypt integration               |
-| **Socket Proxy**      | Restricts Docker socket access for Traefik                                      |
-| **Grafana**           | Dashboards for monitoring metrics and logs                                      |
-| **Prometheus**        | Metrics collection for services                                                 |
-| **Node Exporter**     | Exports host system metrics to Prometheus                                       |
-| **Apache Exporter**   | Exports Apache metrics to Prometheus                                            |
-| **Postgres Exporter** | Exports Postgres metrics to Prometheus                                          |
-| **Loki**              | Centralized log aggregation                                                     |
-| **Promtail**          | Tails and ships log information to Loki                                         |
+| Container                | Description                                                                                 |
+|:-------------------------|---------------------------------------------------------------------------------------------|
+| **Apache (HTTPD)**       | HTTPD serving DERIVA WSGI apps                                                              |
+| **Keycloak**             | A preconfigured KeyCloak IDP for use with the Credenza Authn Broker                         |
+| **DERIVA Groups**        | DERIVA Group Management Web Service (Alpha) - Optional, not deployed by default             |
+| **JupyterHub**           | JupyterHub server container. Optional, deployed by default in `test` profile                |
+| **JupyterLab**           | JupyterLab server container. Optional, deployed by default in `test` profile                |
+| **Jupyter Socket Proxy** | Restricts Docker socket access for Jupyter. Optional, deployed by default in `test` profile |
+| **PostgreSQL**           | Metadata and relational data store                                                          |
+| **RabbitMQ**             | Message broker for event notification                                                       |
+| **Rsyslog**              | Container-based system logging                                                              |
+| **Traefik**              | TLS-enabled reverse proxy with optional Let's Encrypt integration                           |
+| **Traefik Socket Proxy** | Restricts Docker socket access for Traefik                                                  |
+| **Grafana**              | Dashboards for monitoring metrics and logs                                                  |
+| **Prometheus**           | Metrics collection for services                                                             |
+| **Node Exporter**        | Exports host system metrics to Prometheus                                                   |
+| **Apache Exporter**      | Exports Apache metrics to Prometheus                                                        |
+| **Postgres Exporter**    | Exports Postgres metrics to Prometheus                                                      |
+| **Loki**                 | Centralized log aggregation                                                                 |
+| **Promtail**             | Tails and ships log information to Loki                                                     |
 
-#### Note: 
+#### Note:
 
 Depending on the Docker Compose profiles used when launching the container stack, some of the above listed containers
 may not be deployed. Options for which compose profiles to use are set by `utils/generate-env.sh`.
@@ -72,16 +83,20 @@ may not be deployed. Options for which compose profiles to use are set by `utils
 
 ### Setup Environment
 
-Use the provided `utils/generate-env.sh` script to generate one or more `.env` files. The `env` file is a set of parameters 
-that are used to control both the composition (i.e., one or more Docker Compose profiles) of the container stack and certain 
-aspects of each container's runtime configuration.
+Use the provided `utils/generate-env.sh` script to generate one or more `.env` files. The `env` file is a set of
+parameters that are used to control both the composition (i.e., one or more Docker Compose profiles) of the container 
+stack and certain aspects of each container's runtime configuration.
+
+#### Note: The following setup commands are meant to be executed from within the `deriva-docker` base directory.
 
 ```bash
 ./utils/generate-env.sh
 ```
 
-Invoked without arguments, the command above will generate an environment-specific `localhost.env` config file, located at `~/.deriva-docker/env/localhost.env`, using the 
-`test` environment profile. This profile includes the entire container stack, including test users and a test catalog #1 running under the hostname `localhost`.
+Invoked without arguments, the command above will generate an environment-specific `localhost.env` config file, located
+at `~/.deriva-docker/env/localhost.env`, using the
+`test` environment profile. This profile includes the entire container stack (as well as the Jupyter stack), including a
+local Keycloak IDP and a test catalog #1 running under the hostname `localhost`.
 
 ##### User credentials (Test profile):
 
@@ -90,65 +105,82 @@ Invoked without arguments, the command above will generate an environment-specif
 | Admin        | **deriva-admin** | deriva-admin |
 | User         | **deriva**       | deriva       |
 
+### Add the `deriva/certs/deriva-dev-ca.crt` CA certificate to your OS trust store.
 
-### Add the `deriva/certs/deriva-dev-ca.crt` CA certificate to your OS trust store. 
-This step is recommended (but functionally optional) when running the container stack on `localhost`. The container stack will use a 
-certificate issued by the DERIVA DevOps `deriva-dev` certificate authority. Installing this CA certificate will avoid browser 
-certificate invalidity warnings for certificates issued by this CA.
+This step is recommended (but functionally optional) when running the container stack on `localhost`. The container
+stack will use a certificate issued by the DERIVA DevOps `deriva-dev` certificate authority. Installing this CA 
+certificate will avoid browser certificate invalidity warnings for certificates issued by this CA.
 
 #### Linux (Debian/Ubuntu):
+
 ```bash
     sudo cp ./deriva/certs/deriva-dev-ca.crt /usr/local/share/ca-certificates/deriva-dev-ca.crt && sudo update-ca-certificates
 ```
 
 #### Linux (Fedora/RHEL):
+
 ```bash
     sudo cp ./deriva/certs/deriva-dev-ca.crt /etc/pki/ca-trust/source/anchors/deriva-dev-ca.crt && sudo update-ca-trust extract
 ```
 
 #### MacOS:
+
 ```bash
     sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ./deriva/certs/deriva-dev-ca.crt
 ```
 
 #### Windows:
 
-Click on the CA certificate file in Windows Explorer and follow the Certificate Installation Wizard prompts, using all default/suggested settings.
+Click on the CA certificate file in Windows Explorer and follow the Certificate Installation Wizard prompts, using all
+default/suggested settings.
 
 ---
+
 ### Working with the Container Stack
 
-The following `docker` commands are meant to be executed from the Docker Compose project root: `deriva-docker/deriva`.
+#### Note: The following `docker` commands are meant to be executed from the Docker Compose project root:
+`deriva-docker/deriva`. Change to it before proceeding.
 
 ```bash
 cd deriva
 ```
 
 #### Start the Stack:
-Note that on first launch the following command will cause the stack to be built, which includes downloading all 
+
+Note that on first launch the following command will cause the stack to be built, which includes downloading all
 dependency images. This can take a while depending on the host system environment and network speed.
+
 ```bash
 docker compose --env-file ~/.deriva-docker/env/localhost.env up
 ```
+
 You can append `-d` to the above command to detach and run the stack in the background.
 
 #### Test the Stack:
-Visit `https://localhost` to verify functionality. The landing page will contain some basic links that can be used as entry points for further testing.
+
+Visit `https://localhost` to verify functionality. The landing page will contain some basic links that can be used as
+entry points for further testing.
 
 #### Stop the Stack:
 
 ```bash
 docker compose --env-file ~/.deriva-docker/env/localhost.env stop
 ```
+
 If you ran the stack without detaching (i.e., without `-d`), you can simply `ctrl-c` to stop the stack.
 
-Note you can also use `pause` and `unpause` to temporarily halt the container stack. Resuming from `pause` is fast and  can be useful when you want to disable the containers but then restart them quickly.
+Note you can also use `pause` and `unpause` to temporarily halt the container stack. Resuming from `pause` is fast and
+can be useful when you want to disable the containers but then restart them quickly.
+
 #### Delete the Stack (and optionally, associated volumes):
+
 ```bash
 docker compose --env-file ~/.deriva-docker/env/localhost.env down
 ```
-You can append the `-v` argument (after `down`) to also delete the container volume mounts. 
-Note that deleting the volume mounts will destroy any persistent state that has been created, e.g. Postgres databases, Hatrac files at `/var/www/hatrac`, etc.
+
+You can append the `-v` argument (after `down`) to also delete the container volume mounts.
+Note that deleting the volume mounts will destroy any persistent state that has been created, e.g. Postgres databases,
+Hatrac files at `/var/www/hatrac`, etc.
 
 
 ---
@@ -156,11 +188,13 @@ Note that deleting the volume mounts will destroy any persistent state that has 
 ## TLS Support
 
 - Self-signed development certificates (auto-generated if missing)
-- Trusted development certificates via an installable DERIVA Development CA certificate
-- Statically configured TLS certificates from external CAs.
+- Trusted development certificates via an installable DERIVA Development CA certificate (default for `localhost`
+  configuration)
+- Statically configured TLS certificates from external CAs
 - Dynamically configured TLS certificates using Let's Encrypt (via Traefik)
 
-Configure TLS settings via the `CERT_FILENAME`, `KEY_FILENAME`, `CERT_DIR`, `CA_FILENAME` and `LETSENCRYPT_EMAIL` variables &#40;as appropriate&#41; in the environment file.
+Configure TLS settings via the `CERT_FILENAME`, `KEY_FILENAME`, `CERT_DIR`, `CA_FILENAME` and `LETSENCRYPT_EMAIL`
+variables (as appropriate) in the environment file.
 
 See the TLS [configuration guide (WIP)](docs/TLS-config.md) for more information.
 
