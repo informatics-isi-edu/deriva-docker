@@ -87,7 +87,7 @@ Use the provided `utils/generate-env.sh` script to generate one or more `.env` f
 parameters that are used to control both the composition (i.e., one or more Docker Compose profiles) of the container 
 stack and certain aspects of each container's runtime configuration.
 
-#### Note: The following setup commands are meant to be executed from within the `deriva-docker` base directory.
+###### Note: The following setup commands are meant to be executed from within the `deriva-docker` base directory.
 
 ```bash
 ./utils/generate-env.sh
@@ -138,8 +138,7 @@ default/suggested settings.
 
 ### Working with the Container Stack
 
-#### Note: The following `docker` commands are meant to be executed from the Docker Compose project root:
-`deriva-docker/deriva`. Change to it before proceeding.
+###### Note: The following `docker` commands are meant to be executed from the Docker Compose project root: `deriva-docker/deriva`. Change to it before proceeding.
 
 ```bash
 cd deriva
