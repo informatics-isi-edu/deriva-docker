@@ -123,7 +123,7 @@ generate_env_file() {
   DEFAULT_CREDENZA_ENCRYPTION_KEY=$(generate_random_string 24)
   DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET=$(generate_random_string 32)
   DEFAULT_KEYCLOAK_BASE_URL="http://keycloak:8080/auth/realms/deriva"
-  JUPYTERHUB_CRYPT_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+  JUPYTERHUB_CRYPT_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '\n')
   GRAFANA_USERNAME="deriva-admin"
   GRAFANA_PASSWORD="deriva-admin"
   POSTGRES_HOST="deriva-postgres"

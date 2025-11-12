@@ -92,11 +92,9 @@ c.DockerSpawner.pull_policy = "Never"
 c.DockerSpawner.notebook_dir = "/home/jovyan"
 c.DockerSpawner.remove = True
 
-# Per-user named volumes (optional split for caches/venvs)
+# Per-user named volumes
 c.DockerSpawner.volumes = {
-    "jupyterhub-user-{username}": "/home/jovyan",
-    "jupyterhub-user-{username}-uvcache": "/home/jovyan/.cache/uv",
-    "jupyterhub-user-{username}-venvs": "/home/jovyan/venvs",
+    "jupyterhub-user-{username}": "/home/jovyan"
 }
 
 # Ensure single-user containers join the same docker network as the hub
