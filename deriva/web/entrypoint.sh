@@ -123,7 +123,7 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
     mkdir -p /home/credenza/secrets
     chown credenza /home/credenza/secrets
     inject_secret run/secrets/credenza_db_password CREDENZA_DB_PASSWORD
-    inject_secret /run/secrets/credenza_encryption_key CREDENZA_ENCRYPTION_KEY
+    inject_secret run/secrets/credenza_encryption_key CREDENZA_ENCRYPTION_KEY
     inject_secret run/secrets/keycloak_deriva_client_secret KEYCLOAK_CLIENT_SECRET
     if require_envs KEYCLOAK_CLIENT_SECRET; then
       export CLIENT_ID=${KEYCLOAK_CLIENT_ID:-"deriva-client"} CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}

@@ -8,7 +8,8 @@
       "secret": "${KEYCLOAK_DERIVA_CLIENT_SECRET}",
       "redirectUris": [
         "https://${CONTAINER_HOSTNAME}/authn/callback",
-        "https://${CONTAINER_HOSTNAME}/authn/device/callback"
+        "https://${CONTAINER_HOSTNAME}/authn/device/callback",
+        "https://${CONTAINER_HOSTNAME}/jupyterhub/oauth_callback"
       ],
       "attributes": {
         "post.logout.redirect.uris": "https://${CONTAINER_HOSTNAME}/*",

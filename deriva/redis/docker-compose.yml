@@ -49,7 +49,7 @@ services:
       - internal_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.redis-commander.rule=Host(`${CONTAINER_HOSTNAME}`) && PathPrefix(`/redis`)"
+      - "traefik.http.routers.redis-commander.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/redis`)"
       - "traefik.http.routers.redis-commander.entrypoints=websecure"
       - "traefik.http.routers.redis-commander.tls=true"
       - "traefik.http.routers.redis-commander.tls.options=mintls13@file"

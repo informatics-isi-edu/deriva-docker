@@ -1,0 +1,7 @@
+tini
+ca-certificates
+curl
+rsync
+bash
+git
+jq

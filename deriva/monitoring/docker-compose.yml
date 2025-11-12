@@ -91,7 +91,7 @@ services:
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/monitoring/
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`${CONTAINER_HOSTNAME}`) && PathPrefix(`/monitoring`)"
+      - "traefik.http.routers.grafana.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/monitoring`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
       - "traefik.http.routers.grafana.tls.options=mintls13@file"

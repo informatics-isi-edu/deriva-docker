@@ -1,0 +1,6 @@
+jupyterhub
+jupyterlab
+ipykernel
+deriva
+deriva-ml
+pip-system-certs

@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  jupyterhub:
+    build:
+      context: ./jupyterhub
+    container_name: jupyterhub
+    restart: no
+    depends_on: [ ]
+    environment:
+      CONTAINER_HOSTNAME: "${CONTAINER_HOSTNAME}"
+      COMPOSE_PROJECT_NAME: "${COMPOSE_PROJECT_NAME}"
+      JUPYTERHUB_BASE_URL: "/jupyterhub/"
+      JUPYTERHUB_PUBLIC_URL: "https://${CONTAINER_HOSTNAME}"
+      OIDC_AUTHORIZE_URL: "https://${CONTAINER_HOSTNAME}/auth/realms/deriva/protocol/openid-connect/auth"
+      OIDC_TOKEN_URL: "${KEYCLOAK_BASE_URL}/protocol/openid-connect/token"
+      OIDC_USERINFO_URL: "${KEYCLOAK_BASE_URL}/protocol/openid-connect/userinfo"
+      OIDC_SCOPE: "openid email profile"
+      OIDC_USERNAME_KEY: "preferred_username"
+      JUPYTERHUB_ADMIN_GROUPS: "${JUPYTERHUB_ADMIN_GROUPS:-admins}"
+      JUPYTERHUB_ALLOWED_GROUPS: "${JUPYTERHUB_ALLOWED_GROUPS:-users,admins}"
+      SPAWNER: "docker"
+      DOCKER_HOST: "tcp://jupyterhub-docker-proxy:2375"
+      SINGLEUSER_IMAGE: "${SINGLEUSER_IMAGE:-isrddev/deriva-jupyter-singleuser:latest}"
+    volumes:
+      - ./jupyterhub:/srv/jupyterhub
+      - jupyterhub-data:/data
+    networks:
+      - internal_network
+    secrets:
+      - jupyterhub_crypt_key
+      - keycloak_deriva_client_secret
+    command: >
+      jupyterhub -f /srv/jupyterhub/jupyterhub_config.py
+    labels:
+    - "traefik.enable=true"
+    - "traefik.http.routers.jupyterhub.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/jupyterhub`)"
+    - "traefik.http.routers.jupyterhub.entrypoints=websecure"
+    - "traefik.http.routers.jupyterhub.tls=true"
+    - "traefik.http.routers.jupyterhub.tls.options=mintls13@file"
+    - "traefik.http.services.jupyterhub.loadbalancer.server.port=8000"
+
+  # Limit access to the docker environment
+  jupyter-docker-proxy:
+    image: lscr.io/linuxserver/socket-proxy:latest
+    container_name: jupyter-docker-proxy
+    environment:
+      # fine-grained allowlist
+      PING: 1
+      VERSION: 1
+      INFO: 1
+      IMAGES: 1
+      CONTAINERS: 1
+      NETWORKS: 1
+      VOLUMES: 1
+      EXEC: 1
+      POST: 1
+      LOG_LEVEL: warning
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    tmpfs:
+      - /run
+    networks:
+      - internal_network
+    restart: no
+
+  jupyter-singleuser:
+    build:
+      context: images/jupyter-singleuser
+      additional_contexts:
+        certs: ../certs
+    image: isrddev/deriva-jupyter-singleuser:latest
+    command: ["bash","-lc","exec jupyter lab --ip=0.0.0.0"]
+

@@ -10,6 +10,8 @@ services:
     networks:
       internal_network:
         ipv4_address: ${RPROXY_IP}
+        aliases:
+          - ${CONTAINER_HOSTNAME_INTERNAL}
 
   traefik-static-tls:
     extends:
@@ -37,7 +39,7 @@ services:
       - "--providers.file.directory=/etc/traefik/config"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.endpoint=tcp://docker-proxy:2375"
+      - "--providers.docker.endpoint=tcp://traefik-docker-proxy:2375"
       - "--entrypoints.web.address=:${HTTP_PORT}"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
@@ -64,7 +66,7 @@ services:
       - "--providers.file.directory=/etc/traefik/config"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.endpoint=tcp://docker-proxy:2375"
+      - "--providers.docker.endpoint=tcp://traefik-docker-proxy:2375"
       - "--entrypoints.web.address=:${HTTP_PORT}"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
@@ -78,7 +80,7 @@ services:
   # Limit Traefik's access to the docker environment
   traefik-docker-proxy:
     image: lscr.io/linuxserver/socket-proxy:latest
-    container_name: docker-proxy
+    container_name: traefik-docker-proxy
     environment:
       - CONTAINERS=1
       - POST=0
