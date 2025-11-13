@@ -32,6 +32,7 @@ else:
 
 
 c.JupyterHub.shutdown_on_logout = True
+c.JupyterHub.cleanup_servers = True
 c.JupyterHub.concurrent_spawn_limit = 10
 c.JupyterHub.active_server_limit = 0
 
@@ -47,7 +48,7 @@ c.GenericOAuthenticator.oauth_callback_url = f"{public_url}{c.JupyterHub.base_ur
 c.GenericOAuthenticator.authorize_url = os.environ["OIDC_AUTHORIZE_URL"]
 c.GenericOAuthenticator.token_url = os.environ["OIDC_TOKEN_URL"]
 c.GenericOAuthenticator.userdata_url = os.environ["OIDC_USERINFO_URL"]
-c.GenericOAuthenticator.scope = shlex.split(os.environ.get("OIDC_SCOPE", "openid email profile"))
+c.GenericOAuthenticator.scope = shlex.split(os.environ.get("OIDC_SCOPE", "openid email profile offline_access"))
 
 # --- Userinfo call behavior (replaces userdata_method) ---
 # Defaults are fine for Keycloak (Bearer token in Authorization header)
@@ -69,8 +70,11 @@ if _admin_groups:
 if _allowed_groups:
     c.GenericOAuthenticator.allowed_groups = _allowed_groups
 
-# Keep auth_state so groups can refresh at spawn
-c.Authenticator.enable_auth_state = True
+c.Authenticator.enable_auth_state = True                 # store tokens/refresh_token in DB
+c.Authenticator.auth_refresh_age = 300                  # recheck/refresh at most every 5 min
+c.OAuthenticator.refresh_pre_spawn = True               # refresh before (re)spawning user server
+c.OAuthenticator.scope = ["openid", "profile", "email", "offline_access"]
+
 c.GenericOAuthenticator.refresh_pre_spawn = True
 # Tell JupyterHub which key(s) to use for auth_state encryption
 keyfile = "/run/secrets/jupyterhub_crypt_key"
@@ -82,7 +86,7 @@ c.CryptKeeper.keys = [key]
 # ------------------ Spawner: Docker ------------------
 
 c.JupyterHub.spawner_class = DockerSpawner
-c.DockerSpawner.container_name_template = "jupyter-{username}"
+c.DockerSpawner.name_template = "jupyter-{username}"
 
 c.DockerSpawner.image = os.environ.get("SINGLEUSER_IMAGE", "isrddev/deriva-jupyter-singleuser:latest")
 c.DockerSpawner.use_docker_client_env = True
@@ -90,7 +94,6 @@ c.DockerSpawner.pull_policy = "Never"
 
 # Persist the home dir so notebooks, kernels, and venvs survive restarts
 c.DockerSpawner.notebook_dir = "/home/jovyan"
-c.DockerSpawner.remove = True
 
 # Per-user named volumes
 c.DockerSpawner.volumes = {
@@ -104,7 +107,12 @@ c.DockerSpawner.use_internal_ip = True
 c.DockerSpawner.environment = {
     "JUPYTERHUB_BASE_URL": os.environ.get("JUPYTERHUB_BASE_URL", "/jupyterhub/"),
     "UV_CACHE_DIR": "/home/jovyan/.cache/uv",
+    "SERVERAPP_SHUTDOWN_NO_ACTIVITY_TIMEOUT": "2100"  # 35 min
 }
+
+# cleanup
+c.DockerSpawner.remove = True                # delete container once stopped
+c.DockerSpawner.extra_create_kwargs = {"stop_timeout": 30}
 
 # Users land in JupyterLab
 c.Spawner.default_url = "/lab"

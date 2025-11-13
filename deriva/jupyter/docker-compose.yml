@@ -6,7 +6,6 @@ services:
       context: ./jupyterhub
     container_name: jupyterhub
     restart: no
-    depends_on: [ ]
     environment:
       CONTAINER_HOSTNAME: "${CONTAINER_HOSTNAME}"
       COMPOSE_PROJECT_NAME: "${COMPOSE_PROJECT_NAME}"
@@ -15,7 +14,7 @@ services:
       OIDC_AUTHORIZE_URL: "https://${CONTAINER_HOSTNAME}/auth/realms/deriva/protocol/openid-connect/auth"
       OIDC_TOKEN_URL: "${KEYCLOAK_BASE_URL}/protocol/openid-connect/token"
       OIDC_USERINFO_URL: "${KEYCLOAK_BASE_URL}/protocol/openid-connect/userinfo"
-      OIDC_SCOPE: "openid email profile"
+      OIDC_SCOPE: "openid email profile offline_access"
       OIDC_USERNAME_KEY: "preferred_username"
       JUPYTERHUB_ADMIN_GROUPS: "${JUPYTERHUB_ADMIN_GROUPS:-admins}"
       JUPYTERHUB_ALLOWED_GROUPS: "${JUPYTERHUB_ALLOWED_GROUPS:-users,admins}"

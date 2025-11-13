@@ -168,6 +168,9 @@
       extends:
         file: jupyter/docker-compose.yml
         service: jupyterhub
+      depends_on:
+        jupyterhub-docker-proxy:
+          condition: service_started
       secrets:
         - keycloak_deriva_client_secret
     jupyterhub-docker-proxy:
