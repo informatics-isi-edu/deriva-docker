@@ -90,7 +90,7 @@ c.DockerSpawner.name_template = "jupyter-{username}"
 
 c.DockerSpawner.image = os.environ.get("SINGLEUSER_IMAGE", "isrddev/deriva-jupyter-singleuser:latest")
 c.DockerSpawner.use_docker_client_env = True
-c.DockerSpawner.pull_policy = "Never"
+#c.DockerSpawner.pull_policy = "Never"
 
 # Persist the home dir so notebooks, kernels, and venvs survive restarts
 c.DockerSpawner.notebook_dir = "/home/jovyan"
