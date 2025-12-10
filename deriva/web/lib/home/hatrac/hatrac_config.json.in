@@ -2,7 +2,7 @@
   "storage_backend": "filesystem",
   "storage_path": "/var/www/hatrac",
   "database_type": "postgres",
-  "database_dsn": "dbname=hatrac",
+  "database_dsn": "dbname=hatrac host=${POSTGRES_HOST}",
   "database_schema": "hatrac",
   "database_max_retries": 5,
   "403_html": "<html><body><h1>Access Forbidden</h1><p>%(message)s</p></body></html>",

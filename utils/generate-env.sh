@@ -9,6 +9,7 @@ CUSTOM_HOSTNAME=""
 DECORATE_HOSTNAME="false"
 ENABLE_CREDENZA_REDIS="false"
 ENABLE_KEYCLOAK="false"
+ENABLE_JUPYTER="false"
 ENABLE_GROUPS="false"
 ENABLE_DDNS="false"
 LETSENCRYPT_EMAIL=""
@@ -31,6 +32,7 @@ Options:
   --enable-credenza-redis, -r   Enable Redis backend for Credenza authentication broker
   --enable-keycloak, -k         Enable KeyCloak IDP container
   --enable-groups, -g           Enable Deriva Groups containers
+  --enable-jupyter, -j          Enable Jupyter containers
   --enable-ddns,                Enable DDNS refresh
   --email EMAIL                 Let's Encrypt email address (required for dev, staging, prod)
   --cert-filename FILE          Certificate filename (optional)
@@ -60,6 +62,7 @@ while [[ $# -gt 0 ]]; do
     --enable-credenza-redis|-r) ENABLE_CREDENZA_REDIS="true"; shift ;;
     --enable-keycloak|-k) ENABLE_KEYCLOAK="true"; shift ;;
     --enable-groups|-g) ENABLE_GROUPS="true"; shift ;;
+    --enable-jupyter|-j) ENABLE_JUPYTER="true"; shift ;;
     --enable-ddns) ENABLE_DDNS="true"; shift ;;
     --ermrest-admin-group) ERMREST_ADMIN_GROUP="$2"; shift 2 ;;
     --hatrac-admin-group) HATRAC_ADMIN_GROUP="$2"; shift 2 ;;
@@ -120,6 +123,7 @@ generate_env_file() {
   DEFAULT_CREDENZA_ENCRYPTION_KEY=$(generate_random_string 24)
   DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET=$(generate_random_string 32)
   DEFAULT_KEYCLOAK_BASE_URL="http://keycloak:8080/auth/realms/deriva"
+  JUPYTERHUB_CRYPT_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '\n')
   GRAFANA_USERNAME="deriva-admin"
   GRAFANA_PASSWORD="deriva-admin"
   POSTGRES_HOST="deriva-postgres"
@@ -150,9 +154,11 @@ generate_env_file() {
   [[ "$DECORATE_HOSTNAME" == "true" ]] && HOSTNAME="${ENV}-${HOSTNAME}"
   SAFE_HOSTNAME=$(echo "$HOSTNAME" | tr '.-' '_')
   COMPOSE_PROJECT_NAME="deriva-${SAFE_HOSTNAME}"
+  INTERNAL_HOSTNAME=$(echo "${HOSTNAME%%.*}")
 
   if [[ "$ORG_HOSTNAME" == "localhost" ]]; then
     HOSTNAME=$ORG_HOSTNAME
+    INTERNAL_HOSTNAME="deriva"
   fi
 
   DEFAULT_SECRETS_DIR="${OUTPUT_DIR}/secrets/${SAFE_HOSTNAME}"
@@ -189,6 +195,7 @@ generate_env_file() {
     test)
       THIRD_OCTET=3
       ENABLE_KEYCLOAK="true"
+      ENABLE_JUPYTER="true"
       if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
         COMPOSE_PROFILES+=",deriva-web-rproxy,credenza-redis,credenza-redis-dev,test"
         CREDENZA_REDIS_COMMANDER_PASSWORD="credenza-admin"
@@ -212,6 +219,14 @@ generate_env_file() {
   [[ "$ENABLE_KEYCLOAK" == "true" ]] && COMPOSE_PROFILES+=",deriva-auth-keycloak"
   [[ "$ENABLE_GROUPS" == "true" ]] && COMPOSE_PROFILES+=",deriva-groups"
   [[ "$ENABLE_DDNS" == "true" ]] && COMPOSE_PROFILES+=",ddns-update"
+
+  if [[ "$ENABLE_JUPYTER" == "true" ]]; then
+    if [[ "$ENABLE_KEYCLOAK" == "false" ]]; then
+      echo "❌ Jupyter support requires KeyCloak to be enabled. Jupyter support will not be enabled."
+    else
+      COMPOSE_PROFILES+=",jupyter"
+    fi
+  fi
 
   SUBNET="172.28.${THIRD_OCTET}.0/24"
   GATEWAY="172.28.${THIRD_OCTET}.1"
@@ -247,6 +262,7 @@ generate_env_file() {
     CREDENZA_DB_PASSWORD
     CREDENZA_ENCRYPTION_KEY
     GRAFANA_PASSWORD
+    JUPYTERHUB_CRYPT_KEY
   )
   [[ "$ENV" == "test" && "$ENABLE_CREDENZA_REDIS" == "true" ]] && SECRET_VARS+=(CREDENZA_REDIS_COMMANDER_PASSWORD)
   # Keycloak secrets
@@ -269,6 +285,7 @@ COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 # General
 DEPLOY_ENV=${ENV}
 CONTAINER_HOSTNAME=${HOSTNAME}
+CONTAINER_HOSTNAME_INTERNAL=${INTERNAL_HOSTNAME}
 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
 LETSENCRYPT_CERTDIR=${LETSENCRYPT_CERTDIR}
 

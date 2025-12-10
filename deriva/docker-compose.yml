@@ -1,5 +1,10 @@
   services:
     # DERIVA Core services
+    base:
+      build: base
+      image: isrddev/deriva-base:latest
+      profiles:
+        - images
     logging:
       profiles:
         - deriva-base
@@ -38,7 +43,7 @@
         file: rproxy/docker-compose.yml
         service: traefik-static-tls
       depends_on:
-        docker-proxy:
+        traefik-docker-proxy:
           condition: service_started
         web-rproxy:
           condition: service_healthy
@@ -50,14 +55,13 @@
         file: rproxy/docker-compose.yml
         service: traefik-letsencrypt
       depends_on:
-        docker-proxy:
+        traefik-docker-proxy:
           condition: service_started
         web-rproxy-letsencrypt:
           condition: service_healthy
-    docker-proxy:
+    traefik-docker-proxy:
       profiles:
         - rproxy
-        - docker-proxy
         - deriva-web-rproxy
         - deriva-web-rproxy-letsencrypt
       extends:
@@ -157,6 +161,31 @@
       secrets:
         - keycloak_deriva_client_secret
 
+    # Jupyter
+    jupyterhub:
+      profiles:
+        - jupyter
+      extends:
+        file: jupyter/docker-compose.yml
+        service: jupyterhub
+      depends_on:
+        jupyterhub-docker-proxy:
+          condition: service_started
+      secrets:
+        - keycloak_deriva_client_secret
+    jupyterhub-docker-proxy:
+      profiles:
+        - jupyter
+      extends:
+        file: jupyter/docker-compose.yml
+        service: jupyter-docker-proxy
+    jupyter-singleuser:
+      profiles:
+        - images
+      extends:
+        file: jupyter/docker-compose.yml
+        service: jupyter-singleuser
+
     # DDNS Automatic Updater
     ddns-updater:
       profiles:
@@ -189,6 +218,9 @@
     credenza_redis_data:
     keycloak_data:
 
+    # JupyterHub
+    jupyterhub-data:
+
   secrets:
     # Postgres secrets - includes Postgres password and individual Deriva service database passwords
     postgres_password:
@@ -204,7 +236,7 @@
     postgres_credenza_password:
       file: ${SECRETS_DIR}/credenza_db_password.txt
 
-    # KeyCloak client secret - used in Keycloak config and Credenza config
+    # KeyCloak client secret - used in Keycloak, Credenza and Jupyter configs
     keycloak_deriva_client_secret:
       file: ${SECRETS_DIR}/keycloak_deriva_client_secret.txt
 
@@ -217,6 +249,10 @@
     # Redis commander password - used only in test environments with Redis backend
     credenza_redis_commander_password:
       file: ${SECRETS_DIR}/credenza_redis_commander_password.txt
+
+    # JupyterHub crypt key - used to encrypt sensistive data in JupyterHub database
+    jupyterhub_crypt_key:
+      file: ${SECRETS_DIR}/jupyterhub_crypt_key.txt
 
   networks:
     internal_network:

@@ -91,7 +91,7 @@ services:
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/monitoring/
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`${CONTAINER_HOSTNAME}`) && PathPrefix(`/monitoring`)"
+      - "traefik.http.routers.grafana.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/monitoring`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
       - "traefik.http.routers.grafana.tls.options=mintls13@file"
@@ -163,28 +163,14 @@ services:
         tag: "{{.Name}}"
 
   postgres_exporter:
-    build:
-      context: .
-      dockerfile: Dockerfile.deriva-postgres-exporter
+    image: quay.io/prometheuscommunity/postgres-exporter:latest
     container_name: deriva-monitoring-postgres-exporter
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}@${POSTGRES_HOST}:5432/postgres?sslmode=disable"
+      DATA_SOURCE_URI: "${POSTGRES_HOST}:5432/postgres?sslmode=disable"
+      DATA_SOURCE_USER: "${POSTGRES_USER}"
+      DATA_SOURCE_PASS_FILE: "/run/secrets/postgres_password"
     secrets:
       - postgres_password
-    entrypoint: ["/bin/sh", "-eu", "-c"]
-    command:
-      - "umask 077; \
-         mkdir -p /run/postgres_exporter; \
-         PW=\"$(cat /run/secrets/postgres_password)\"; \
-         printf '%s:%s:%s:%s:%s\n' \"$${POSTGRES_HOST}\" 5432 postgres \"$${POSTGRES_USER}\" \"$${PW}\" \
-           > /run/postgres_exporter/.pgpass; \
-         chmod 600 /run/postgres_exporter/.pgpass; \
-         export PGPASSFILE=/run/postgres_exporter/.pgpass; \
-         exec /bin/postgres_exporter --config.file=/etc/prometheus/prometheus.yaml"
-    tmpfs:
-      - /run/postgres_exporter
     networks:
       - internal_network
     depends_on:
