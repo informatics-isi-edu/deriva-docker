@@ -69,12 +69,12 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
     export ENV PIP_NO_CACHE_DIR=yes
 
     # Inject required secrets into environment
-    inject_secret run/secrets/postgres_password POSTGRES_PASSWORD
-    inject_secret run/secrets/postgres_ermrest_password POSTGRES_ERMREST_PASSWORD
-    inject_secret run/secrets/postgres_hatrac_password POSTGRES_HATRAC_PASSWORD
-    inject_secret run/secrets/postgres_deriva_password POSTGRES_DERIVA_PASSWORD
-    inject_secret run/secrets/postgres_webauthn_password POSTGRES_WEBAUTHN_PASSWORD
-    inject_secret run/secrets/postgres_credenza_password POSTGRES_CREDENZA_PASSWORD
+    inject_secret /run/secrets/postgres_password POSTGRES_PASSWORD
+    inject_secret /run/secrets/postgres_ermrest_password POSTGRES_ERMREST_PASSWORD
+    inject_secret /run/secrets/postgres_hatrac_password POSTGRES_HATRAC_PASSWORD
+    inject_secret /run/secrets/postgres_deriva_password POSTGRES_DERIVA_PASSWORD
+    inject_secret /run/secrets/postgres_webauthn_password POSTGRES_WEBAUTHN_PASSWORD
+    inject_secret /run/secrets/postgres_credenza_password POSTGRES_CREDENZA_PASSWORD
 
     # Configure Postgres user account and connection
     if require_envs POSTGRES_HOST POSTGRES_USER POSTGRES_PASSWORD; then
@@ -122,9 +122,15 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
     # Configure Credenza
     mkdir -p /home/credenza/secrets
     chown credenza /home/credenza/secrets
-    inject_secret run/secrets/credenza_db_password CREDENZA_DB_PASSWORD
-    inject_secret run/secrets/credenza_encryption_key CREDENZA_ENCRYPTION_KEY
-    inject_secret run/secrets/keycloak_deriva_client_secret KEYCLOAK_CLIENT_SECRET
+    inject_secret /run/secrets/credenza_db_password CREDENZA_DB_PASSWORD
+    inject_secret /run/secrets/credenza_encryption_key CREDENZA_ENCRYPTION_KEY
+    inject_secret /run/secrets/keycloak_deriva_client_secret KEYCLOAK_CLIENT_SECRET
+    if require_envs POSTGRES_HOST POSTGRES_CREDENZA_PASSWORD; then
+      substitute_env_vars "/home/credenza/.pgpass.in" "/home/credenza/.pgpass" \
+       '${POSTGRES_HOST} ${POSTGRES_CREDENZA_PASSWORD}'
+      chown credenza /home/credenza/.pgpass
+      chmod 0600 /home/credenza/.pgpass
+    fi
     if require_envs KEYCLOAK_CLIENT_SECRET; then
       export CLIENT_ID=${KEYCLOAK_CLIENT_ID:-"deriva-client"} CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
       CLIENT_SECRET_FILE_IN="/home/credenza/config/template_client_secret.json.in"
@@ -197,6 +203,15 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
         cp $CERT_PATH $SYSTEM_CA_CERT_PATH
         update-ca-certificates
     fi
+
+    # unset secrets in env that are no longer needed
+    unset POSTGRES_PASSWORD POSTGRES_ERMREST_PASSWORD POSTGRES_HATRAC_PASSWORD \
+     POSTGRES_DERIVA_PASSWORD POSTGRES_WEBAUTHN_PASSWORD POSTGRES_CREDENZA_PASSWORD
+    unset CREDENZA_DB_PASSWORD CREDENZA_ENCRYPTION_KEY
+    unset CLIENT_ID CLIENT_SECRET KEYCLOAK_CLIENT_SECRET
+    unset GLOBUS_CLIENT_ID GLOBUS_CLIENT_SECRET GLOBUS_NATIVE_CLIENT_ID
+    unset COGNITO_CLIENT_ID COGNITO_CLIENT_SECRET COGNITO_NATIVE_CLIENT_ID
+    unset OKTA_CLIENT_ID OKTA_CLIENT_SECRET
 
     touch "$DEPLOYMENT_MARKER_FILE"
     echo "✅   Deriva software deployment complete."
