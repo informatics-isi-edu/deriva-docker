@@ -7,6 +7,7 @@ ENV_TYPE=""
 OUTPUT_DIR="${HOME}/.deriva-docker/env"
 CUSTOM_HOSTNAME=""
 DECORATE_HOSTNAME="false"
+ENABLE_CREDENZA_ISOLATION="false"
 ENABLE_CREDENZA_REDIS="false"
 ENABLE_KEYCLOAK="false"
 ENABLE_JUPYTER="false"
@@ -25,21 +26,22 @@ Usage: $0 [OPTIONS]
 Generate a DERIVA environment configuration file for use with docker-compose.
 
 Options:
-  --env, -e ENV                 Environment type (required): test | dev | staging | prod | all
-  --output-dir DIR              Output directory for generated env file (default: ~/.deriva-docker/env)
-  --hostname, -h NAME           Custom hostname (optional)
-  --decorate-hostname, -d       Prepend the environment name to the hostname (e.g. dev-myhost), automatic when using "-e all", except for "localhost"
-  --enable-credenza-redis, -r   Enable Redis backend for Credenza authentication broker
-  --enable-keycloak, -k         Enable KeyCloak IDP container
-  --enable-groups, -g           Enable Deriva Groups containers
-  --enable-jupyter, -j          Enable Jupyter containers
-  --enable-ddns,                Enable DDNS refresh
-  --email EMAIL                 Let's Encrypt email address (required for dev, staging, prod)
-  --cert-filename FILE          Certificate filename (optional)
-  --key-filename FILE           Private key filename (optional)
-  --ca-filename FILE            CA certificate filename (optional)
-  --cert-dir DIR                Certificate base directory (optional)
-  --help, -?                    Show this help message and exit
+  --env, -e ENV                     Environment type (required): test | dev | staging | prod | all
+  --output-dir DIR                  Output directory for generated env file (default: ~/.deriva-docker/env)
+  --hostname, -h NAME               Custom hostname (optional)
+  --decorate-hostname, -d           Prepend the environment name to the hostname (e.g. dev-myhost), automatic when using "-e all", except for "localhost"
+  --enable-credenza-isolation, -c   Create a separate, isolated container for Credenza
+  --enable-credenza-redis, -r       Enable Redis backend for Credenza authentication broker
+  --enable-keycloak, -k             Enable KeyCloak IDP container
+  --enable-groups, -g               Enable Deriva Groups containers
+  --enable-jupyter, -j              Enable Jupyter containers
+  --enable-ddns,                    Enable DDNS refresh
+  --email EMAIL                     Let's Encrypt email address (required for dev, staging, prod)
+  --cert-filename FILE              Certificate filename (optional)
+  --key-filename FILE               Private key filename (optional)
+  --ca-filename FILE                CA certificate filename (optional)
+  --cert-dir DIR                    Certificate base directory (optional)
+  --help, -?                        Show this help message and exit
 
 Examples:
   $0 -e test -h localhost
@@ -59,6 +61,7 @@ while [[ $# -gt 0 ]]; do
       if [[ -n "$2" && ! "$2" =~ ^- ]]; then CUSTOM_HOSTNAME="$2"; shift 2
       else print_help; exit 0; fi ;;
     --decorate-hostname|-d) DECORATE_HOSTNAME="true"; shift ;;
+    --enable-credenza-isolation|-c) ENABLE_CREDENZA_ISOLATION="true"; shift ;;
     --enable-credenza-redis|-r) ENABLE_CREDENZA_REDIS="true"; shift ;;
     --enable-keycloak|-k) ENABLE_KEYCLOAK="true"; shift ;;
     --enable-groups|-g) ENABLE_GROUPS="true"; shift ;;
@@ -123,6 +126,8 @@ generate_env_file() {
   DEFAULT_CREDENZA_ENCRYPTION_KEY=$(generate_random_string 24)
   DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET=$(generate_random_string 32)
   DEFAULT_KEYCLOAK_BASE_URL="http://keycloak:8080/auth/realms/deriva"
+  DEFAULT_AUTHN_SESSION_HOST=$DEFAULT_HOSTNAME
+  DEFAULT_AUTHN_SESSION_HOST_VERIFY=true
   JUPYTERHUB_CRYPT_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '\n')
   GRAFANA_USERNAME="deriva-admin"
   GRAFANA_PASSWORD="deriva-admin"
@@ -166,9 +171,16 @@ generate_env_file() {
   # Apply shared logic for prod/staging/dev
   if [[ "$ENV" == "prod" || "$ENV" == "staging" || "$ENV" == "dev" ]]; then
     if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
-      COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt,credenza-redis"
+      COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt,credenza-redis-backend"
     else
       COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt"
+    fi
+    if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
+      if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
+        COMPOSE_PROFILES+=",credenza-redis"
+      else
+        COMPOSE_PROFILES+=",credenza-postgres"
+      fi
     fi
     POSTGRES_PASSWORD=$(generate_random_string)
     POSTGRES_ERMREST_PASSWORD=$(generate_random_string)
@@ -197,10 +209,16 @@ generate_env_file() {
       ENABLE_KEYCLOAK="true"
       ENABLE_JUPYTER="true"
       if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
-        COMPOSE_PROFILES+=",deriva-web-rproxy,credenza-redis,credenza-redis-dev,test"
+        COMPOSE_PROFILES+=",deriva-web-rproxy,credenza-redis-backend,credenza-redis-commander,test"
+        if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
+          COMPOSE_PROFILES+=",credenza-redis-test"
+        fi
         CREDENZA_REDIS_COMMANDER_PASSWORD="credenza-admin"
       else
         COMPOSE_PROFILES+=",deriva-web-rproxy,test"
+        if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
+          COMPOSE_PROFILES+=",credenza-postgres-test"
+        fi
       fi
       CREATE_TEST_DB=true
       ;;
@@ -214,6 +232,11 @@ generate_env_file() {
     CREDENZA_DB_BACKEND=${CREDENZA_DB_BACKEND_POSTGRES}
     CREDENZA_DB_HOST=${CREDENZA_DB_HOST_POSTGRES}
     CREDENZA_DB_PORT=${CREDENZA_DB_PORT_POSTGRES}
+  fi
+
+  if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
+    AUTHN_SESSION_HOST=${INTERNAL_HOSTNAME}
+    AUTHN_SESSION_HOST_VERIFY=false
   fi
 
   [[ "$ENABLE_KEYCLOAK" == "true" ]] && COMPOSE_PROFILES+=",deriva-auth-keycloak"
@@ -244,6 +267,8 @@ generate_env_file() {
   LETSENCRYPT_CERTDIR="${LETSENCRYPT_CERTDIR:-$DEFAULT_LETSENCRYPT_CERTDIR}"
   ERMREST_ADMIN_GROUP="${HATRAC_ERMREST_GROUP:-$DEFAULT_ERMREST_ADMIN_GROUP}"
   HATRAC_ADMIN_GROUP="${HATRAC_ADMIN_GROUP:-$DEFAULT_HATRAC_ADMIN_GROUP}"
+  AUTHN_SESSION_HOST="${AUTHN_SESSION_HOST:-$DEFAULT_AUTHN_SESSION_HOST}"
+  AUTHN_SESSION_HOST_VERIFY="${AUTHN_SESSION_HOST_VERIFY:-$DEFAULT_AUTHN_SESSION_HOST_VERIFY}"
   CREDENZA_DB_PASSWORD="${CREDENZA_DB_PASSWORD:-$DEFAULT_CREDENZA_DB_PASSWORD}"
   CREDENZA_ENCRYPTION_KEY="${CREDENZA_ENCRYPTION_KEY:-$DEFAULT_CREDENZA_ENCRYPTION_KEY}"
   KEYCLOAK_BASE_URL="${KEYCLOAK_BASE_URL:-$DEFAULT_KEYCLOAK_BASE_URL}"
@@ -310,6 +335,7 @@ CREDENZA_DB_USER=${CREDENZA_DB_USER}
 CREDENZA_DB_HOST=${CREDENZA_DB_HOST}
 CREDENZA_DB_PORT=${CREDENZA_DB_PORT}
 CREDENZA_DEBUG=${CREDENZA_DEBUG}
+CREDENZA_ISOLATION_ENABLED=${ENABLE_CREDENZA_ISOLATION}
 KEYCLOAK_IP=${KEYCLOAK_IP}
 KEYCLOAK_BASE_URL=${KEYCLOAK_BASE_URL}
 
@@ -325,6 +351,8 @@ GRAFANA_PASSWORD=${GRAFANA_PASSWORD}
 CREATE_TEST_DB=${CREATE_TEST_DB}
 ERMREST_ADMIN_GROUP=${ERMREST_ADMIN_GROUP}
 HATRAC_ADMIN_GROUP=${HATRAC_ADMIN_GROUP}
+AUTHN_SESSION_HOST=${AUTHN_SESSION_HOST}
+AUTHN_SESSION_HOST_VERIFY=${AUTHN_SESSION_HOST_VERIFY}
 
 # Secrets
 SECRETS_DIR=${SECRETS_DIR}/${ENV}

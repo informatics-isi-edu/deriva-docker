@@ -1,0 +1,57 @@
+services:
+  credenza:
+    build:
+      context: .
+    container_name: credenza
+    hostname: credenza
+    environment:
+      - DEPLOY_ENV=${DEPLOY_ENV}
+      - CONTAINER_HOSTNAME=${CONTAINER_HOSTNAME}
+      - CREDENZA_DEFAULT_REALM=${CREDENZA_DEFAULT_REALM}
+      - CREDENZA_DB_BACKEND=${CREDENZA_DB_BACKEND}
+      - CREDENZA_DB_USER=${CREDENZA_DB_USER}
+      - CREDENZA_DB_HOST=${CREDENZA_DB_HOST}
+      - CREDENZA_DB_PORT=${CREDENZA_DB_PORT}
+      - CREDENZA_DEBUG=${CREDENZA_DEBUG}
+      - KEYCLOAK_BASE_URL=${KEYCLOAK_BASE_URL}
+    secrets:
+      - keycloak_deriva_client_secret
+      - credenza_db_password
+      - credenza_encryption_key
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}"
+        tag: "{{.Name}}"
+    volumes:
+      - ./credenza-entrypoint.sh:/credenza/entrypoint.sh
+      - ./config:/credenza/config
+    networks:
+      - internal_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8999/health" ]
+      interval: 15s
+      timeout: 10s
+      retries: 4
+      start_period: 5s
+    entrypoint: [ "/credenza/entrypoint.sh" ]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.credenza.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/authn`)"
+      - "traefik.http.routers.credenza.entrypoints=websecure"
+      - "traefik.http.routers.credenza.tls=true"
+      - "traefik.http.routers.credenza.tls.options=mintls13@file"
+      - "traefik.http.routers.credenza.priority=60"
+      - "traefik.http.routers.credenza.middlewares=credenza-stripprefix"
+      - "traefik.http.services.credenza.loadbalancer.server.port=8999"
+      - "traefik.http.middlewares.credenza-stripprefix.stripPrefix.prefixes=/authn"
+
+  credenza-test:
+    extends:
+      service: credenza
+#    volumes:
+#      - ./secrets-ext:/credenza/secrets:ro # this can be uncommented to provide an externally mounted secrets override
+#      - ./config-ext:/credenza/config:ro # this can be uncommented to provide an externally mounted config override
+#      - ./src/credenza:/credenza  # Optional for live code editing
+    profiles:
+      - credenza-test

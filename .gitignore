@@ -17,5 +17,5 @@
 **/*/!src/*/.placeholder
 **/*/secrets*/
 
-/deriva/authn/config-mount/
+/deriva/credenza/config-ext/
 /deriva/rproxy/conf/traefik_tls_certs.yaml

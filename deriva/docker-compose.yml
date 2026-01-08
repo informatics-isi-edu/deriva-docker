@@ -71,17 +71,41 @@
     # Credenza REDIS backend services
     credenza-redis:
       profiles:
-        - credenza-redis
+        - credenza-redis-backend
       extends:
         file: redis/docker-compose.yml
         service: credenza-redis
       restart: unless-stopped
     credenza-redis-commander:
       profiles:
-        - credenza-redis-dev
+        - credenza-redis-commander
       extends:
         file: redis/docker-compose.yml
         service: credenza-redis-commander
+      restart: no
+
+    # Credenza Postgres test/dev container
+    credenza-postgres-test:
+      profiles:
+        - credenza-postgres-test
+      extends:
+        file: credenza/docker-compose.yml
+        service: credenza-test
+      depends_on:
+        database:
+          condition: service_healthy
+      restart: no
+
+    # Credenza Redis test/dev container
+    credenza-redis-test:
+      profiles:
+        - credenza-redis-test
+      extends:
+        file: credenza/docker-compose.yml
+        service: credenza-test
+      depends_on:
+        credenza-redis:
+          condition: service_healthy
       restart: no
 
     # DERIVA Groups
