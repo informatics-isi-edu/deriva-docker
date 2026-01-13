@@ -1,7 +1,11 @@
   services:
     # DERIVA Core services
     base:
-      build: base
+      build:
+        context: base
+        platforms:
+          - linux/amd64
+          - linux/arm64
       image: isrddev/deriva-base:latest
       profiles:
         - images

@@ -68,6 +68,9 @@ services:
       context: images/jupyter-singleuser
       additional_contexts:
         certs: ../certs
+      platforms:
+        - linux/amd64
+        - linux/arm64
     image: isrddev/deriva-jupyter-singleuser:latest
     command: ["bash","-lc","exec jupyter lab --ip=0.0.0.0"]
 
