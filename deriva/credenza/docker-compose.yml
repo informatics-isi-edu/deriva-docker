@@ -2,10 +2,14 @@ services:
   credenza:
     build:
       context: .
+      args:
+        CREDENZA_GIT_BRANCH: ${CREDENZA_GIT_BRANCH:-}
+       # GIT_FETCH: 1
     container_name: credenza
     hostname: credenza
     environment:
       - DEPLOY_ENV=${DEPLOY_ENV}
+      - RPROXY_IP=${RPROXY_IP}
       - CONTAINER_HOSTNAME=${CONTAINER_HOSTNAME}
       - CREDENZA_DEFAULT_REALM=${CREDENZA_DEFAULT_REALM}
       - CREDENZA_DB_BACKEND=${CREDENZA_DB_BACKEND}
@@ -24,7 +28,6 @@ services:
         syslog-address: "tcp://${RSYSLOG_IP}"
         tag: "{{.Name}}"
     volumes:
-      - ./credenza-entrypoint.sh:/credenza/entrypoint.sh
       - ./config:/credenza/config
     networks:
       - internal_network
@@ -34,7 +37,6 @@ services:
       timeout: 10s
       retries: 4
       start_period: 5s
-    entrypoint: [ "/credenza/entrypoint.sh" ]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.credenza.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/authn`)"
@@ -52,6 +54,6 @@ services:
 #    volumes:
 #      - ./secrets-ext:/credenza/secrets:ro # this can be uncommented to provide an externally mounted secrets override
 #      - ./config-ext:/credenza/config:ro # this can be uncommented to provide an externally mounted config override
-#      - ./src/credenza:/credenza  # Optional for live code editing
+#      - ../../../credenza:/credenza  # Optional for live code editing
     profiles:
       - credenza-test

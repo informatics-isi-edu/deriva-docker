@@ -31,8 +31,6 @@ services:
     image: ghcr.io/joeferner/redis-commander:latest
     container_name: credenza-redis-commander
     depends_on:
-      rproxy:
-        condition: service_started
       credenza-redis:
         condition: service_healthy
     environment:

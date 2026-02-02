@@ -25,6 +25,7 @@ services:
       - ../certs:/certs-ext:ro
     environment:
       - HOSTNAME=${CONTAINER_HOSTNAME}
+      - SUBNET=${SUBNET}
       - APACHE_HTTP_PORT=${HTTP_PORT}
       - APACHE_HTTPS_PORT=${HTTPS_PORT}
       - DEPLOY_ENV=${DEPLOY_ENV}
@@ -95,3 +96,4 @@ services:
       service: apache-rproxy
     labels:
       - "traefik.http.routers.apache.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.apache.tls.domains[0].main=${CONTAINER_HOSTNAME}"

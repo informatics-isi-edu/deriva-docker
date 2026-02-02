@@ -187,7 +187,7 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
     substitute_env_vars /etc/apache2/sites-available/http-redirect.conf.template \
      /etc/apache2/sites-available/http-redirect.conf '${APACHE_HTTP_PORT} ${APACHE_HTTPS_PORT}'
     substitute_env_vars /etc/apache2/sites-available/default-ssl.conf.template \
-     /etc/apache2/sites-available/default-ssl.conf '${APACHE_HTTPS_PORT}'
+     /etc/apache2/sites-available/default-ssl.conf '${HOSTNAME} ${APACHE_HTTPS_PORT}'
     # Also need to replace Listen 80 and 443 lines in /etc/apache2/ports.conf to match vhosts entries
     sed -i \
       -e "s/^\s*Listen\s\+80\b/Listen ${APACHE_HTTP_PORT}/" \

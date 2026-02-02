@@ -1,5 +1,6 @@
 <VirtualHost *:${APACHE_HTTPS_PORT}>
-        ServerAdmin webmaster@localhost
+        ServerAdmin webmaster@${HOSTNAME}
+        ServerName ${HOSTNAME}
 
         DocumentRoot /var/www/html
         AllowEncodedSlashes On

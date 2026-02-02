@@ -50,7 +50,7 @@ substitute_env_vars "/credenza/config/oidc_idp_profiles.json.in" \
 
 # set default command
 if [ $# -eq 0 ]; then
-  set -- gunicorn --workers 1 --threads 4 --bind 0.0.0.0:8999 credenza.credenza_wsgi:application
+  set -- gunicorn --workers 1 --threads 4 --bind 0.0.0.0:8999  --forwarded-allow-ips=127.0.0.1,::1,${RPROXY_IP} credenza.credenza_wsgi:application
 fi
 
 # run processes

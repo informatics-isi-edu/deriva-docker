@@ -172,6 +172,9 @@ generate_env_file() {
   if [[ "$ENV" == "prod" || "$ENV" == "staging" || "$ENV" == "dev" ]]; then
     if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
       COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt,credenza-redis-backend"
+        if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
+          COMPOSE_PROFILES+=",credenza-redis-test"
+        fi
     else
       COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt"
     fi
@@ -220,6 +223,12 @@ generate_env_file() {
           COMPOSE_PROFILES+=",credenza-postgres-test"
         fi
       fi
+      CERT_DIR="${CERT_DIR:-$DEFAULT_CERT_DIR}"
+      DEFAULT_CERT_FILENAME="${CERT_DIR}.crt"
+      DEFAULT_KEY_FILENAME="${CERT_DIR}.key"
+      CERT_FILENAME="${CERT_FILENAME:-$DEFAULT_CERT_FILENAME}"
+      KEY_FILENAME="${KEY_FILENAME:-$DEFAULT_KEY_FILENAME}"
+      CA_FILENAME="${CA_FILENAME:-$DEFAULT_CA_FILENAME}"
       CREATE_TEST_DB=true
       ;;
   esac
@@ -257,12 +266,6 @@ generate_env_file() {
   KEYCLOAK_IP="172.28.${THIRD_OCTET}.200"
   RPROXY_IP="172.28.${THIRD_OCTET}.250"
 
-  CERT_DIR="${CERT_DIR:-$DEFAULT_CERT_DIR}"
-  DEFAULT_CERT_FILENAME="${CERT_DIR}.crt"
-  DEFAULT_KEY_FILENAME="${CERT_DIR}.key"
-  CERT_FILENAME="${CERT_FILENAME:-$DEFAULT_CERT_FILENAME}"
-  KEY_FILENAME="${KEY_FILENAME:-$DEFAULT_KEY_FILENAME}"
-  CA_FILENAME="${CA_FILENAME:-$DEFAULT_CA_FILENAME}"
   LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL:-$DEFAULT_LETSENCRYPT_EMAIL}"
   LETSENCRYPT_CERTDIR="${LETSENCRYPT_CERTDIR:-$DEFAULT_LETSENCRYPT_CERTDIR}"
   ERMREST_ADMIN_GROUP="${HATRAC_ERMREST_GROUP:-$DEFAULT_ERMREST_ADMIN_GROUP}"

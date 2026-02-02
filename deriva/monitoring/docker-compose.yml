@@ -132,6 +132,8 @@ services:
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
       - "--path.rootfs=/rootfs"
+      - '--collector.filesystem.mount-points-exclude=^/(run|proc|sys|dev)($|/)'
+      - '--collector.filesystem.fs-types-exclude=^(tmpfs|overlay|squashfs)$'
     networks:
       - internal_network
     depends_on:

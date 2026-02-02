@@ -3,6 +3,8 @@ services:
     container_name: rproxy
     image: traefik:latest
     restart: no
+    environment:
+      - SUBNET=${SUBNET}
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
       - "${HTTPS_PORT}:${HTTPS_PORT}"
@@ -45,6 +47,10 @@ services:
       - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.websecure.address=:${HTTPS_PORT}"
       - "--entrypoints.websecure.http.tls=true"
+      - "--entryPoints.web.forwardedHeaders.insecure=false"
+      - "--entryPoints.web.forwardedHeaders.trustedIPs=${SUBNET}"
+      - "--entryPoints.websecure.forwardedHeaders.insecure=false"
+      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=${SUBNET}"
 
   # Prod profile: Let's Encrypt via HTTP challenge
   traefik-letsencrypt:
@@ -53,7 +59,8 @@ services:
     environment:
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
     volumes:
-      - ./conf/:/etc/traefik/config:ro
+      - ./conf/:/etc/traefik/config
+      - ./entrypoint.sh:/entrypoint.sh
       - ${LETSENCRYPT_CERTDIR}:/letsencrypt
     command:
 #      - "--log.level=debug"
@@ -72,6 +79,10 @@ services:
       - "--entryPoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.websecure.address=:${HTTPS_PORT}"
       - "--entrypoints.websecure.http.tls=true"
+      - "--entryPoints.web.forwardedHeaders.insecure=false"
+      - "--entryPoints.web.forwardedHeaders.trustedIPs=${SUBNET}"
+      - "--entryPoints.websecure.forwardedHeaders.insecure=false"
+      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=${SUBNET}"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
