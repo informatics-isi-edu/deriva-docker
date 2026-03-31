@@ -317,6 +317,15 @@ generate_env_file() {
   mkdir -p "$OUTPUT_DIR"
   ENV_FILE="${OUTPUT_DIR}/$SAFE_HOSTNAME.env"
 
+  # Only remap hostnames and disable SSL verification when running locally
+  if [[ "$ORG_HOSTNAME" == "localhost" ]]; then
+    DERIVA_MCP_HOSTNAME_MAP="{\"${HOSTNAME}\":\"${INTERNAL_HOSTNAME}\"}"
+    DERIVA_MCP_SSL_VERIFY="false"
+  else
+    DERIVA_MCP_HOSTNAME_MAP="{}"
+    DERIVA_MCP_SSL_VERIFY="true"
+  fi
+
   cat <<EOF > "$ENV_FILE"
 # Auto-generated $(date)
 
@@ -373,6 +382,7 @@ AUTHN_SESSION_HOST_VERIFY=${AUTHN_SESSION_HOST_VERIFY}
 
 # MCP
 DERIVA_MCP_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY}
+DERIVA_MCP_HOSTNAME_MAP=${DERIVA_MCP_HOSTNAME_MAP}
 
 # Secrets
 SECRETS_DIR=${SECRETS_DIR}/${ENV}

@@ -15,11 +15,9 @@ services:
       - DERIVA_MCP_CREDENZA_URL=https://${CONTAINER_HOSTNAME}/authn
       - DERIVA_MCP_SERVER_URL=https://${CONTAINER_HOSTNAME}/mcp
       - DERIVA_MCP_SERVER_RESOURCE=https://${CONTAINER_HOSTNAME}/mcp
-      - DERIVA_MCP_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY:-true}
-      # Remap tool hostnames and Credenza calls to the internal network alias.
-      # When CONTAINER_HOSTNAME is "localhost", connections from inside the
-      # container must use CONTAINER_HOSTNAME_INTERNAL (e.g. "deriva") instead.
-      - DERIVA_MCP_HOSTNAME_MAP={"${CONTAINER_HOSTNAME}":"${CONTAINER_HOSTNAME_INTERNAL}"}
+      - DERIVA_MCP_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY}
+      # Hostname remapping for local deployments only; empty string on external deployments.
+      - DERIVA_MCP_HOSTNAME_MAP=${DERIVA_MCP_HOSTNAME_MAP}
       # Point Python requests at the system CA bundle updated by entrypoint.sh.
       - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
       # CA filename to install from /certs-ext (set to empty string to skip).
