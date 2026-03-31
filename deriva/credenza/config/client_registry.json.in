@@ -49,6 +49,11 @@
         "https://localhost/mcp",
         "https://dev-mdarcy.at.derivacloud.net/mcp"
       ],
+      "require_consent": true,
+      "consent_display_name": "DERIVA MCP Server",
+      "consent_labels": {
+        "https://localhost/mcp": "Connect to the DERIVA MCP Server at this URL"
+      },
       "max_session_ttl_seconds": 28800,
       "additional_claims": {
         "name": "Deriva MCP Client App",
