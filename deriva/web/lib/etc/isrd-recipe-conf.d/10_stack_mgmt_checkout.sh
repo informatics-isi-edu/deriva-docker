@@ -1,12 +1,12 @@
 isrd_checkout_code() {
   # Ref may be branch-ish (e.g., origin/master) or tag-ish (e.g., v1.2.3) depending on resolve_checkout_ref().
   declare -A DEFAULT_REF=(
-    [webauthn]="origin/session_resource_arg"
-    [credenza]="origin/m2m_support"
+    [webauthn]="origin/master"
+    [credenza]="origin/auth_server_refactor"
     [ermrest]="origin/master"
-    [hatrac]="origin/S3-signature-version-fix"
+    [hatrac]="origin/master"
     [ermresolve]="origin/master"
-    [deriva-web]="origin/package-namespace-refactor"
+    [deriva-web]="origin/master"
     [deriva-py]="origin/master"
     [ermrestjs]="origin/master"
     [chaise]="origin/master"

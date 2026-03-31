@@ -3,7 +3,7 @@ services:
     build:
       context: .
       args:
-        CREDENZA_GIT_BRANCH: ${CREDENZA_GIT_BRANCH:-}
+        CREDENZA_GIT_BRANCH: ${CREDENZA_GIT_BRANCH:-auth_server_refactor}
        # GIT_FETCH: 1
     container_name: credenza
     hostname: credenza
@@ -19,9 +19,10 @@ services:
       - CREDENZA_DEBUG=${CREDENZA_DEBUG}
       - KEYCLOAK_BASE_URL=${KEYCLOAK_BASE_URL}
     secrets:
-      - keycloak_deriva_client_secret
       - credenza_db_password
       - credenza_encryption_key
+      - keycloak_deriva_client_secret
+      - mcp_client_secret
     logging:
       driver: syslog
       options:
@@ -48,12 +49,26 @@ services:
       - "traefik.http.services.credenza.loadbalancer.server.port=8999"
       - "traefik.http.middlewares.credenza-stripprefix.stripPrefix.prefixes=/authn"
 
+      # RFC 8414 Section 2: for an issuer with path prefix /authn, the spec-compliant
+      # discovery URL is /.well-known/oauth-authorization-server/authn (at the host root).
+      # This path does not match PathPrefix(/authn), so a second router is required.
+      # The replacePathRegex middleware rewrites the path before forwarding to Flask,
+      # which expects /.well-known/oauth-authorization-server (no suffix).
+      - "traefik.http.routers.credenza-wellknown.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && Path(`/.well-known/oauth-authorization-server/authn`)"
+      - "traefik.http.routers.credenza-wellknown.entrypoints=websecure"
+      - "traefik.http.routers.credenza-wellknown.tls=true"
+      - "traefik.http.routers.credenza-wellknown.tls.options=mintls13@file"
+      - "traefik.http.routers.credenza-wellknown.service=credenza"
+      - "traefik.http.routers.credenza-wellknown.middlewares=credenza-wellknown-rewrite"
+      - "traefik.http.middlewares.credenza-wellknown-rewrite.replacePathRegex.regex=^/.well-known/oauth-authorization-server/authn$$"
+      - "traefik.http.middlewares.credenza-wellknown-rewrite.replacePathRegex.replacement=/.well-known/oauth-authorization-server"
+
   credenza-test:
     extends:
       service: credenza
-#    volumes:
+    volumes:
 #      - ./secrets-ext:/credenza/secrets:ro # this can be uncommented to provide an externally mounted secrets override
 #      - ./config-ext:/credenza/config:ro # this can be uncommented to provide an externally mounted config override
-#      - ../../../credenza:/credenza  # Optional for live code editing
+      - ../../../credenza:/credenza  # Optional for live code editing
     profiles:
       - credenza-test

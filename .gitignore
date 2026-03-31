@@ -21,3 +21,4 @@
 /deriva/credenza/config/oidc_idp_profiles.json
 /deriva/credenza/config/service_auth.json.json
 /deriva/rproxy/conf/traefik_tls_certs.yaml
+/deriva/credenza/config/client_registry.json

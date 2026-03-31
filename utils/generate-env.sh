@@ -13,6 +13,7 @@ ENABLE_KEYCLOAK="false"
 ENABLE_JUPYTER="false"
 ENABLE_GROUPS="false"
 ENABLE_DDNS="false"
+ENABLE_MCP="false"
 LETSENCRYPT_EMAIL=""
 CERT_FILENAME=""
 KEY_FILENAME=""
@@ -36,6 +37,7 @@ Options:
   --enable-groups, -g               Enable Deriva Groups containers
   --enable-jupyter, -j              Enable Jupyter containers
   --enable-ddns,                    Enable DDNS refresh
+  --enable-mcp, -m                  Enable the DERIVA MCP server (deriva-mcp)
   --email EMAIL                     Let's Encrypt email address (required for dev, staging, prod)
   --cert-filename FILE              Certificate filename (optional)
   --key-filename FILE               Private key filename (optional)
@@ -67,6 +69,7 @@ while [[ $# -gt 0 ]]; do
     --enable-groups|-g) ENABLE_GROUPS="true"; shift ;;
     --enable-jupyter|-j) ENABLE_JUPYTER="true"; shift ;;
     --enable-ddns) ENABLE_DDNS="true"; shift ;;
+    --enable-mcp|-m) ENABLE_MCP="true"; shift ;;
     --ermrest-admin-group) ERMREST_ADMIN_GROUP="$2"; shift 2 ;;
     --hatrac-admin-group) HATRAC_ADMIN_GROUP="$2"; shift 2 ;;
     --email) LETSENCRYPT_EMAIL="$2"; shift 2 ;;
@@ -148,7 +151,8 @@ generate_env_file() {
   CREDENZA_DB_BACKEND_POSTGRES="postgresql"
   CREDENZA_DB_HOST_POSTGRES=${POSTGRES_HOST}
   CREDENZA_DB_PORT_POSTGRES="5432"
-
+  DEFAULT_MCP_CLIENT_SECRET=$(generate_random_string 32)
+  DEFAULT_DERIVA_MCP_SSL_VERIFY=true
   DEFAULT_ERMREST_ADMIN_GROUP="admin"
   DEFAULT_HATRAC_ADMIN_GROUP="admin"
   CREATE_TEST_DB=false
@@ -211,6 +215,7 @@ generate_env_file() {
       THIRD_OCTET=3
       ENABLE_KEYCLOAK="true"
       ENABLE_JUPYTER="true"
+      ENABLE_MCP="true"
       if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
         COMPOSE_PROFILES+=",deriva-web-rproxy,credenza-redis-backend,credenza-redis-commander,test"
         if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
@@ -251,6 +256,7 @@ generate_env_file() {
   [[ "$ENABLE_KEYCLOAK" == "true" ]] && COMPOSE_PROFILES+=",deriva-auth-keycloak"
   [[ "$ENABLE_GROUPS" == "true" ]] && COMPOSE_PROFILES+=",deriva-groups"
   [[ "$ENABLE_DDNS" == "true" ]] && COMPOSE_PROFILES+=",ddns-update"
+  [[ "$ENABLE_MCP" == "true" ]] && COMPOSE_PROFILES+=",deriva-mcp"
 
   if [[ "$ENABLE_JUPYTER" == "true" ]]; then
     if [[ "$ENABLE_KEYCLOAK" == "false" ]]; then
@@ -277,6 +283,8 @@ generate_env_file() {
   KEYCLOAK_BASE_URL="${KEYCLOAK_BASE_URL:-$DEFAULT_KEYCLOAK_BASE_URL}"
   KEYCLOAK_DERIVA_CLIENT_SECRET="${KEYCLOAK_DERIVA_CLIENT_SECRET:-$DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET}"
   SECRETS_DIR="${SECRETS_DIR:-$DEFAULT_SECRETS_DIR}"
+  MCP_CLIENT_SECRET="${MCP_CLIENT_SECRET:-$DEFAULT_MCP_CLIENT_SECRET}"
+  DERIVA_MCP_SSL_VERIFY="${DERIVA_MCP_SSL_VERIFY:-$DEFAULT_DERIVA_MCP_SSL_VERIFY}"
 
   # Build up the set of secret variables to emit to files
   SECRET_VARS=()
@@ -297,6 +305,12 @@ generate_env_file() {
   if [[ "$ENABLE_KEYCLOAK" == "true" ]]; then
     SECRET_VARS+=(
       KEYCLOAK_DERIVA_CLIENT_SECRET
+    )
+  fi
+  # MCP secrets
+  if [[ "$ENABLE_MCP" == "true" ]]; then
+    SECRET_VARS+=(
+      MCP_CLIENT_SECRET
     )
   fi
 
@@ -356,6 +370,9 @@ ERMREST_ADMIN_GROUP=${ERMREST_ADMIN_GROUP}
 HATRAC_ADMIN_GROUP=${HATRAC_ADMIN_GROUP}
 AUTHN_SESSION_HOST=${AUTHN_SESSION_HOST}
 AUTHN_SESSION_HOST_VERIFY=${AUTHN_SESSION_HOST_VERIFY}
+
+# MCP
+DERIVA_MCP_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY}
 
 # Secrets
 SECRETS_DIR=${SECRETS_DIR}/${ENV}

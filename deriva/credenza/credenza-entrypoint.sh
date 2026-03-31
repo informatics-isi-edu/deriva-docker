@@ -47,6 +47,14 @@ fi
 substitute_env_vars "/credenza/config/oidc_idp_profiles.json.in" \
  "/credenza/config/oidc_idp_profiles.json"
 
+inject_secret /run/secrets/mcp_client_secret DERIVA_MCP_CLIENT_SECRET
+if require_envs DERIVA_MCP_CLIENT_SECRET; then
+  export HASHED_DERIVA_MCP_CLIENT_SECRET=$(python3 -c \
+    "from argon2 import PasswordHasher; import sys; print(PasswordHasher().hash(sys.stdin.read().strip()))" \
+    <<< "${DERIVA_MCP_CLIENT_SECRET}")
+  substitute_env_vars "/credenza/config/client_registry.json.in" "/credenza/config/client_registry.json" \
+   '${HASHED_DERIVA_MCP_CLIENT_SECRET}'
+fi
 
 # set default command
 if [ $# -eq 0 ]; then

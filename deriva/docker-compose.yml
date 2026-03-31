@@ -214,6 +214,14 @@
         file: jupyter/docker-compose.yml
         service: jupyter-singleuser
 
+    # MCP Server
+    deriva-mcp:
+      profiles:
+        - deriva-mcp
+      extends:
+        file: mcp/docker-compose.yml
+        service: deriva-mcp
+
     # DDNS Automatic Updater
     ddns-updater:
       profiles:
@@ -278,9 +286,13 @@
     credenza_redis_commander_password:
       file: ${SECRETS_DIR}/credenza_redis_commander_password.txt
 
-    # JupyterHub crypt key - used to encrypt sensistive data in JupyterHub database
+    # JupyterHub crypt key - used to encrypt sensitive data in JupyterHub database
     jupyterhub_crypt_key:
       file: ${SECRETS_DIR}/jupyterhub_crypt_key.txt
+
+    # MCP Server client secret
+    mcp_client_secret:
+      file: ${SECRETS_DIR}/mcp_client_secret.txt
 
   networks:
     internal_network:

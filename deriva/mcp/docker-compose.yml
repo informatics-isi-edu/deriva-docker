@@ -1,0 +1,61 @@
+services:
+  deriva-mcp:
+    build:
+      context: .
+      args:
+        DERIVA_MCP_CORE_GIT_BRANCH: ${DERIVA_MCP_CORE_GIT_BRANCH:-main}
+        EXTRA_PACKAGES: ${DERIVA_MCP_EXTRA_PACKAGES:-}
+       # GIT_FETCH: 1
+    container_name: deriva-mcp
+    depends_on:
+      logging:
+        condition: service_healthy
+    environment:
+      - DEPLOY_ENV=${DEPLOY_ENV}
+      - DERIVA_MCP_CREDENZA_URL=https://${CONTAINER_HOSTNAME}/authn
+      - DERIVA_MCP_SERVER_URL=https://${CONTAINER_HOSTNAME}/mcp
+      - DERIVA_MCP_SERVER_RESOURCE=https://${CONTAINER_HOSTNAME}/mcp
+      - DERIVA_MCP_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY:-true}
+      # Remap tool hostnames and Credenza calls to the internal network alias.
+      # When CONTAINER_HOSTNAME is "localhost", connections from inside the
+      # container must use CONTAINER_HOSTNAME_INTERNAL (e.g. "deriva") instead.
+      - DERIVA_MCP_HOSTNAME_MAP={"${CONTAINER_HOSTNAME}":"${CONTAINER_HOSTNAME_INTERNAL}"}
+      # Point Python requests at the system CA bundle updated by entrypoint.sh.
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      # CA filename to install from /certs-ext (set to empty string to skip).
+      - CA_FILENAME=${CA_FILENAME:-}
+    volumes:
+      - ./config/deriva-mcp.env:/etc/deriva-mcp/deriva-mcp.env
+      - ../certs:/certs-ext:ro
+    secrets:
+      - mcp_client_secret
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}:514"
+        tag: "{{.Name}}"
+    networks:
+      - internal_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 4
+      start_period: 15s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mcp.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/mcp`)"
+      - "traefik.http.routers.mcp.entrypoints=websecure"
+      - "traefik.http.routers.mcp.tls=true"
+      - "traefik.http.routers.mcp.tls.options=mintls13@file"
+      - "traefik.http.routers.mcp.priority=50"
+      - "traefik.http.routers.mcp.middlewares=mcp-stripprefix"
+      - "traefik.http.services.mcp.loadbalancer.server.port=8000"
+      - "traefik.http.middlewares.mcp-stripprefix.stripPrefix.prefixes=/mcp"
+
+      # RFC 9728: protected resource metadata is at host-root /.well-known/... (no strip)
+      - "traefik.http.routers.mcp-wellknown.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && Path(`/.well-known/oauth-protected-resource/mcp`)"
+      - "traefik.http.routers.mcp-wellknown.entrypoints=websecure"
+      - "traefik.http.routers.mcp-wellknown.tls=true"
+      - "traefik.http.routers.mcp-wellknown.tls.options=mintls13@file"
+      - "traefik.http.routers.mcp-wellknown.service=mcp"

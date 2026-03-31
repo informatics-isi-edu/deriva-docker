@@ -16,8 +16,11 @@
         #ErrorLog ${APACHE_LOG_DIR}/ssl_error_log
         #TransferLog ${APACHE_LOG_DIR}/ssl_access_log combined
         SetEnvIf Request_URI "^/(healthcheck\.txt|server-status.*)$" dontlog
-        ErrorLog  "|/usr/bin/logger -t apache_ssl_error -p local1.err"
-        CustomLog "|/usr/bin/logger -t apache_ssl_access -p local1.info" combined env=!dontlog
+        SetEnvIf X-Forwarded-For ".+" have_xff
+        SetEnvIfExpr "%{ENV:have_xff} == '1' && %{ENV:dontlog} != '1'" log_with_xff
+        SetEnvIfExpr "%{ENV:have_xff} != '1' && %{ENV:dontlog} != '1'" log_no_xff
+        CustomLog "|/usr/bin/logger -t apache_ssl_access -p local1.info" with_xff env=log_with_xff
+        CustomLog "|/usr/bin/logger -t apache_ssl_access -p local1.info" no_xff  env=log_no_xff
 
         LogLevel warn
 
