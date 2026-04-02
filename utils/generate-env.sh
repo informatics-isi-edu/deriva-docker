@@ -14,6 +14,8 @@ ENABLE_JUPYTER="false"
 ENABLE_GROUPS="false"
 ENABLE_DDNS="false"
 ENABLE_MCP="false"
+ENABLE_CHATBOT="false"
+ANTHROPIC_API_KEY=""
 LETSENCRYPT_EMAIL=""
 CERT_FILENAME=""
 KEY_FILENAME=""
@@ -38,6 +40,8 @@ Options:
   --enable-jupyter, -j              Enable Jupyter containers
   --enable-ddns,                    Enable DDNS refresh
   --enable-mcp, -m                  Enable the DERIVA MCP server (deriva-mcp)
+  --enable-chatbot, -b              Enable the DERIVA Chatbot UI (deriva-mcp-ui)
+  --anthropic-api-key KEY           Anthropic API key (required when --enable-chatbot is set)
   --email EMAIL                     Let's Encrypt email address (required for dev, staging, prod)
   --cert-filename FILE              Certificate filename (optional)
   --key-filename FILE               Private key filename (optional)
@@ -70,6 +74,8 @@ while [[ $# -gt 0 ]]; do
     --enable-jupyter|-j) ENABLE_JUPYTER="true"; shift ;;
     --enable-ddns) ENABLE_DDNS="true"; shift ;;
     --enable-mcp|-m) ENABLE_MCP="true"; shift ;;
+    --enable-chatbot|-b) ENABLE_CHATBOT="true"; shift ;;
+    --anthropic-api-key) ANTHROPIC_API_KEY="$2"; shift 2 ;;
     --ermrest-admin-group) ERMREST_ADMIN_GROUP="$2"; shift 2 ;;
     --hatrac-admin-group) HATRAC_ADMIN_GROUP="$2"; shift 2 ;;
     --email) LETSENCRYPT_EMAIL="$2"; shift 2 ;;
@@ -257,6 +263,7 @@ generate_env_file() {
   [[ "$ENABLE_GROUPS" == "true" ]] && COMPOSE_PROFILES+=",deriva-groups"
   [[ "$ENABLE_DDNS" == "true" ]] && COMPOSE_PROFILES+=",ddns-update"
   [[ "$ENABLE_MCP" == "true" ]] && COMPOSE_PROFILES+=",deriva-mcp"
+  [[ "$ENABLE_CHATBOT" == "true" ]] && COMPOSE_PROFILES+=",deriva-chatbot"
 
   if [[ "$ENABLE_JUPYTER" == "true" ]]; then
     if [[ "$ENABLE_KEYCLOAK" == "false" ]]; then
@@ -384,6 +391,9 @@ AUTHN_SESSION_HOST_VERIFY=${AUTHN_SESSION_HOST_VERIFY}
 DERIVA_MCP_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY}
 DERIVA_MCP_HOSTNAME_MAP=${DERIVA_MCP_HOSTNAME_MAP}
 
+# Chatbot
+ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
 # Secrets
 SECRETS_DIR=${SECRETS_DIR}/${ENV}
 
@@ -443,6 +453,12 @@ if [[ "$ENV_TYPE" != "all" && ("$ENV_TYPE" == "prod" || "$ENV_TYPE" == "staging"
   echo "❌ Missing required --email for environment: $ENV_TYPE"
   echo "Please provide a valid email address for Let's Encrypt account registration."
   exit 1
+fi
+
+# Warn if chatbot enabled without an API key
+if [[ "$ENABLE_CHATBOT" == "true" && -z "$ANTHROPIC_API_KEY" ]]; then
+  echo "⚠️  --enable-chatbot is set but --anthropic-api-key was not provided."
+  echo "   Set ANTHROPIC_API_KEY in the generated env file before starting the chatbot."
 fi
 
 

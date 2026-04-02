@@ -222,6 +222,14 @@
         file: mcp/docker-compose.yml
         service: deriva-mcp
 
+    # Chatbot UI
+    deriva-chatbot:
+      profiles:
+        - deriva-chatbot
+      extends:
+        file: mcp-ui/docker-compose.yml
+        service: deriva-chatbot
+
     # DDNS Automatic Updater
     ddns-updater:
       profiles:

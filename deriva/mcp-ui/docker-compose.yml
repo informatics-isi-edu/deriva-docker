@@ -1,0 +1,49 @@
+services:
+  deriva-chatbot:
+    build:
+      context: .
+      args:
+        DERIVA_MCP_UI_GIT_BRANCH: ${DERIVA_MCP_UI_GIT_BRANCH:-main}
+       # GIT_FETCH: 1
+    container_name: deriva-chatbot
+    depends_on:
+      logging:
+        condition: service_healthy
+    environment:
+      - DEPLOY_ENV=${DEPLOY_ENV}
+      - HOSTNAME=${CONTAINER_HOSTNAME}
+      - DERIVA_CHATBOT_CREDENZA_URL=https://${CONTAINER_HOSTNAME}/authn
+      - DERIVA_CHATBOT_MCP_URL=https://${CONTAINER_HOSTNAME}/mcp
+      - DERIVA_CHATBOT_MCP_RESOURCE=https://${CONTAINER_HOSTNAME}/mcp
+      - DERIVA_CHATBOT_PUBLIC_URL=https://${CONTAINER_HOSTNAME}/chatbot
+      # Point Python requests at the system CA bundle updated by entrypoint.sh.
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      # CA filename to install from /certs-ext (set to empty string to skip).
+      - CA_FILENAME=${CA_FILENAME:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./config/deriva-mcp-ui.env:/etc/deriva-mcp-ui/deriva-mcp-ui.env
+      - ../certs:/certs-ext:ro
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}:514"
+        tag: "{{.Name}}"
+    networks:
+      - internal_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 4
+      start_period: 15s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatbot.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/chatbot`)"
+      - "traefik.http.routers.chatbot.entrypoints=websecure"
+      - "traefik.http.routers.chatbot.tls=true"
+      - "traefik.http.routers.chatbot.tls.options=mintls13@file"
+      - "traefik.http.routers.chatbot.priority=50"
+      - "traefik.http.routers.chatbot.middlewares=chatbot-stripprefix"
+      - "traefik.http.services.chatbot.loadbalancer.server.port=8001"
+      - "traefik.http.middlewares.chatbot-stripprefix.stripPrefix.prefixes=/chatbot"
