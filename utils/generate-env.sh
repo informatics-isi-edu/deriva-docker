@@ -15,7 +15,7 @@ ENABLE_GROUPS="false"
 ENABLE_DDNS="false"
 ENABLE_MCP="false"
 ENABLE_CHATBOT="false"
-ANTHROPIC_API_KEY=""
+DERIVA_CHATBOT_LLM_API_KEY=""
 LETSENCRYPT_EMAIL=""
 CERT_FILENAME=""
 KEY_FILENAME=""
@@ -41,7 +41,7 @@ Options:
   --enable-ddns,                    Enable DDNS refresh
   --enable-mcp, -m                  Enable the DERIVA MCP server (deriva-mcp)
   --enable-chatbot, -b              Enable the DERIVA Chatbot UI (deriva-mcp-ui)
-  --anthropic-api-key KEY           Anthropic API key (required when --enable-chatbot is set)
+  --llm-api-key KEY                 LLM API key (required when --enable-chatbot is set)
   --email EMAIL                     Let's Encrypt email address (required for dev, staging, prod)
   --cert-filename FILE              Certificate filename (optional)
   --key-filename FILE               Private key filename (optional)
@@ -75,7 +75,7 @@ while [[ $# -gt 0 ]]; do
     --enable-ddns) ENABLE_DDNS="true"; shift ;;
     --enable-mcp|-m) ENABLE_MCP="true"; shift ;;
     --enable-chatbot|-b) ENABLE_CHATBOT="true"; shift ;;
-    --anthropic-api-key) ANTHROPIC_API_KEY="$2"; shift 2 ;;
+    --llm-api-key) DERIVA_CHATBOT_LLM_API_KEY="$2"; shift 2 ;;
     --ermrest-admin-group) ERMREST_ADMIN_GROUP="$2"; shift 2 ;;
     --hatrac-admin-group) HATRAC_ADMIN_GROUP="$2"; shift 2 ;;
     --email) LETSENCRYPT_EMAIL="$2"; shift 2 ;;
@@ -392,7 +392,7 @@ DERIVA_MCP_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY}
 DERIVA_MCP_HOSTNAME_MAP=${DERIVA_MCP_HOSTNAME_MAP}
 
 # Chatbot
-ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+DERIVA_CHATBOT_LLM_API_KEY=${DERIVA_CHATBOT_LLM_API_KEY}
 
 # Secrets
 SECRETS_DIR=${SECRETS_DIR}/${ENV}
@@ -456,9 +456,9 @@ if [[ "$ENV_TYPE" != "all" && ("$ENV_TYPE" == "prod" || "$ENV_TYPE" == "staging"
 fi
 
 # Warn if chatbot enabled without an API key
-if [[ "$ENABLE_CHATBOT" == "true" && -z "$ANTHROPIC_API_KEY" ]]; then
-  echo "⚠️  --enable-chatbot is set but --anthropic-api-key was not provided."
-  echo "   Set ANTHROPIC_API_KEY in the generated env file before starting the chatbot."
+if [[ "$ENABLE_CHATBOT" == "true" && -z "$DERIVA_CHATBOT_LLM_API_KEY" ]]; then
+  echo "⚠️  --enable-chatbot is set but --llm-api-key was not provided."
+  echo "   Set DERIVA_CHATBOT_LLM_API_KEY in the generated env file before starting the chatbot."
 fi
 
 

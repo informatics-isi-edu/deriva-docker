@@ -4,6 +4,7 @@ services:
       context: .
       args:
         DERIVA_MCP_UI_GIT_BRANCH: ${DERIVA_MCP_UI_GIT_BRANCH:-main}
+        DERIVA_MCP_UI_STORAGE_BACKEND: ${DERIVA_MCP_UI_STORAGE_BACKEND:-sqlite}
        # GIT_FETCH: 1
     container_name: deriva-chatbot
     depends_on:
@@ -16,12 +17,15 @@ services:
       - DERIVA_CHATBOT_MCP_URL=https://${CONTAINER_HOSTNAME}/mcp
       - DERIVA_CHATBOT_MCP_RESOURCE=https://${CONTAINER_HOSTNAME}/mcp
       - DERIVA_CHATBOT_PUBLIC_URL=https://${CONTAINER_HOSTNAME}/chatbot
+      - DERIVA_CHATBOT_HOSTNAME_MAP=${DERIVA_MCP_HOSTNAME_MAP}
+      - DERIVA_CHATBOT_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY}
+      - DERIVA_CHATBOT_LLM_API_KEY=${DERIVA_CHATBOT_LLM_API_KEY:-}
       # Point Python requests at the system CA bundle updated by entrypoint.sh.
       - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
       # CA filename to install from /certs-ext (set to empty string to skip).
       - CA_FILENAME=${CA_FILENAME:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
+      - deriva_chatbot_data:/var/lib/deriva-chatbot
       - ./config/deriva-mcp-ui.env:/etc/deriva-mcp-ui/deriva-mcp-ui.env
       - ../certs:/certs-ext:ro
     logging:

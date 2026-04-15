@@ -13,6 +13,7 @@ WORKDIR /
 
 ARG GIT_FETCH=0
 ARG DERIVA_MCP_UI_GIT_BRANCH=main
+ARG DERIVA_MCP_UI_STORAGE_BACKEND=sqlite
 ENV GIT_FETCH=${GIT_FETCH}
 ENV DERIVA_MCP_UI_GIT_BRANCH=${DERIVA_MCP_UI_GIT_BRANCH}
 
@@ -38,7 +39,11 @@ RUN if [ "$GIT_FETCH" = "1" ] || [ ! -f "./deriva-mcp-ui/pyproject.toml" ]; then
 WORKDIR /deriva-mcp-ui
 
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
-RUN uv sync --frozen --no-dev --no-editable
+RUN if [ -n "$DERIVA_MCP_UI_STORAGE_BACKEND" ]; then \
+      uv sync --frozen --no-dev --no-editable --extra "$DERIVA_MCP_UI_STORAGE_BACKEND"; \
+    else \
+      uv sync --frozen --no-dev --no-editable; \
+    fi
 
 
 # Runtime stage: minimal image with only what the server needs to run
@@ -60,6 +65,8 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+
+RUN mkdir -p /var/lib/deriva-chatbot
 
 COPY config/rsyslog.conf /etc/rsyslog.conf
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

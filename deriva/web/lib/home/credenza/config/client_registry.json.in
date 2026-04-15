@@ -72,7 +72,6 @@
       ],
       "allowed_resources": [
         "urn:deriva:rest:service:all",
-        "https://your-host.example.com/mcp",
         "https://localhost/mcp"
       ],
       "allowed_scopes": [
@@ -81,7 +80,6 @@
       "require_consent": true,
       "consent_display_name": "DERIVA Chatbot Server",
       "consent_labels": {
-        "https://your-host.example.com/mcp": "Connect to the DERIVA MCP Server at this URL",
         "https://localhost/mcp": "Connect to the DERIVA MCP Server at this URL"
       },
       "max_session_ttl_seconds": 28800

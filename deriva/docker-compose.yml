@@ -249,6 +249,12 @@
     # Deriva Groups
     deriva_groups:
 
+    # Deriva Chatbot
+    deriva_chatbot_data:
+
+    # Deriva MCP
+    deriva_mcp_data:
+
     # Deriva Monitoring UI
     loki_wal:
     loki_data:

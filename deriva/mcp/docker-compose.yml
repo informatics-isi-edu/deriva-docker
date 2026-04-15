@@ -25,6 +25,7 @@ services:
     volumes:
       - ./config/deriva-mcp.env:/etc/deriva-mcp/deriva-mcp.env
       - ../certs:/certs-ext:ro
+      - deriva_mcp_data:/var/lib/deriva-mcp/data
     secrets:
       - mcp_client_secret
     logging:
