@@ -4,6 +4,20 @@ set -e
 source /usr/local/lib/utils.sh
 source /usr/local/lib/runtime.sh
 
+# Seed any files missing from /credenza/config/ (e.g. when a bind-mount is
+# used for operator customisation and the mount dir is empty on first deploy).
+# Files that already exist are never overwritten -- operator edits are preserved.
+if [[ -d /credenza/config-defaults ]]; then
+  for _f in /credenza/config-defaults/*; do
+    _base="$(basename "$_f")"
+    if [[ ! -f "/credenza/config/$_base" ]]; then
+      echo "Seeding /credenza/config/$_base from image defaults"
+      cp "$_f" "/credenza/config/$_base"
+    fi
+  done
+  unset _f _base
+fi
+
 # CREDENZA_REGEN_CONFIGS: set to "true" to regenerate config files from
 # templates even when the destination already exists. Default is "false" --
 # existing files are preserved so operator customisations survive restarts.
