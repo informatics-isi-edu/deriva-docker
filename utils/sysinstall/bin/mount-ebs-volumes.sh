@@ -8,10 +8,10 @@ EBS_MOUNTS="${EBS_MOUNTS:-/dev/nvme1n1:/data:defaults,nofail}"
 
 # SWAPFILE: absolute path for a file-based swapfile (empty = disabled).
 # Use this when placing swap on the root volume or a mounted EBS volume.
-SWAPFILE="${SWAPFILE:-}"
+SWAPFILE="${SWAPFILE:-/swapfile}"
 
 # SWAPFILE_SIZE: size passed to fallocate -l (e.g. 4G, 8G). Only used when SWAPFILE is set.
-SWAPFILE_SIZE="${SWAPFILE_SIZE:-4G}"
+SWAPFILE_SIZE="${SWAPFILE_SIZE:-8G}"
 
 # SWAP_DEVICE: raw block device to format and use directly as swap (empty = disabled).
 # Use this for ephemeral NVMe instance store devices (e.g. /dev/nvme2n1).

@@ -23,11 +23,14 @@
 #        # Application logs go to CloudWatch (see AWS_LOG_GROUP in env file)
 #
 # Notes:
+#   - Tested baseline: t3.large (2 vCPU, 8 GB RAM) + 8 GB swapfile. Swap is a
+#     safety net for chromadb/RAG memory spikes; sustained swap usage is a signal
+#     to upsize. Configure via SWAPFILE and SWAPFILE_SIZE in deriva-stack.env.
 #   - WorkingDirectory must be the deriva/ subdirectory of the repo checkout so
 #     that relative paths in COMPOSE_FILE (docker-compose.yml:docker-compose-mcp-aws.yml)
 #     resolve correctly.
 #   - Adjust WorkingDirectory if the repo is cloned to a different location.
-#   - Requires Docker Engine with the Compose v2 plugin; installed by install-all.sh.
+#   - Requires Docker Engine with the Compose v2 plugin; installed by install-mcp-stack.sh.
 
 [Unit]
 Description=DERIVA MCP Stack (mcp-core + mcp-ui + credenza + traefik)
