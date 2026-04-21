@@ -74,7 +74,7 @@ services:
         awslogs-stream: credenza-redis
         awslogs-create-group: "true"
     volumes:
-      - ./config-mnt:/credenza/config
+      - ./credenza/config-mnt:/credenza/config
 
   credenza-redis-backend:
     restart: unless-stopped
