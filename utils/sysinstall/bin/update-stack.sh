@@ -10,7 +10,7 @@
 set -euo pipefail
 
 STACK_ENV="/etc/deriva-docker/deriva-stack.env"
-WORK_DIR="/opt/deriva-docker/deriva"
+WORK_DIR="/data/deriva-docker/deriva"
 NO_CACHE_FLAG=""
 SERVICE=""
 

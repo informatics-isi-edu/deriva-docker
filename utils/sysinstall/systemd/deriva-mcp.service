@@ -1,6 +1,6 @@
 # systemd unit for the deriva lean MCP stack (mcp-core + mcp-ui + credenza + traefik).
 #
-# Installation (run as root from the repo root - use /opt/deriva-docker/deriva
+# Installation (run as root from the repo root - use /data/deriva-docker/deriva
 #                or adjust WorkingDirectory if different):
 #
 #   1. Generate the env file and install the symlink to the well-known path:
@@ -48,7 +48,7 @@ Type=oneshot
 RemainAfterExit=yes
 
 # Repo checkout location -- adjust if cloned elsewhere.
-WorkingDirectory=/opt/deriva-docker/deriva
+WorkingDirectory=/data/deriva-docker/deriva
 
 # Generated env file from utils/generate-env.sh --enable-mcp-aws.
 EnvironmentFile=/etc/deriva-docker/deriva-stack.env

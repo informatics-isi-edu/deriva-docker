@@ -49,7 +49,7 @@ Type=oneshot
 RemainAfterExit=yes
 
 # Repo checkout location -- adjust if cloned elsewhere.
-WorkingDirectory=/opt/deriva-docker/deriva
+WorkingDirectory=/data/deriva-docker/deriva
 
 # Generated env file from utils/generate-env.sh --enable-full-aws.
 EnvironmentFile=/etc/deriva-docker/deriva-stack.env

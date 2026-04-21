@@ -7,6 +7,9 @@ services:
        # GIT_FETCH: 1
     container_name: credenza
     hostname: credenza
+    env_file:
+      - path: ${STACK_ENV_FILE}
+        required: false
     environment:
       - DEPLOY_ENV=${DEPLOY_ENV}
       - RPROXY_IP=${RPROXY_IP}
@@ -67,8 +70,8 @@ services:
     extends:
       service: credenza
     volumes:
-#      - ./secrets-ext:/credenza/secrets:ro # this can be uncommented to provide an externally mounted secrets override
-#      - ./config-ext:/credenza/config:ro # this can be uncommented to provide an externally mounted config override
+#      - ./secrets:/credenza/secrets # this can be uncommented to provide an externally mounted secrets override
+#      - ./config-mnt:/credenza/config # this can be uncommented to provide an externally mounted config override
       - ../../../credenza:/credenza  # Optional for live code editing
     profiles:
       - credenza-test

@@ -37,6 +37,24 @@ install -D -m 0755 \
   /usr/local/sbin/update-stack.sh
 echo "[install-mcp-stack] Installed update-stack.sh -> /usr/local/sbin/update-stack.sh"
 
+# ---------------------------------------------------------------------------
+# Pre-build images so the first 'systemctl start' is fast
+# ---------------------------------------------------------------------------
+STACK_ENV="/etc/deriva-docker/deriva-stack.env"
+WORK_DIR="/data/deriva-docker/deriva"
+
+if [[ -f "$STACK_ENV" ]]; then
+  echo ""
+  echo "[install-mcp-stack] Pre-building images (this may take a while)..."
+  cd "$WORK_DIR"
+  docker compose --env-file "$STACK_ENV" build --pull
+  echo "[install-mcp-stack] Image build complete."
+else
+  echo ""
+  echo "[install-mcp-stack] WARNING: $STACK_ENV not found; skipping image pre-build."
+  echo "  Run generate-env.sh --install first, then: docker compose build --pull"
+fi
+
 echo ""
 echo "[install-mcp-stack] Done. To start the stack:"
 echo "  systemctl start deriva-mcp"

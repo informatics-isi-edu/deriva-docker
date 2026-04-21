@@ -52,6 +52,7 @@ services:
         awslogs-region: ${AWS_REGION}
         awslogs-group: ${AWS_LOG_GROUP}
         awslogs-stream: traefik
+        awslogs-create-group: "true"
 
   traefik-docker-proxy:
     restart: unless-stopped
@@ -61,6 +62,7 @@ services:
         awslogs-region: ${AWS_REGION}
         awslogs-group: ${AWS_LOG_GROUP}
         awslogs-stream: traefik-docker-proxy
+        awslogs-create-group: "true"
 
   credenza-redis:
     restart: unless-stopped
@@ -70,6 +72,9 @@ services:
         awslogs-region: ${AWS_REGION}
         awslogs-group: ${AWS_LOG_GROUP}
         awslogs-stream: credenza-redis
+        awslogs-create-group: "true"
+    volumes:
+      - ./config-mnt:/credenza/config
 
   credenza-redis-backend:
     restart: unless-stopped
@@ -79,6 +84,7 @@ services:
         awslogs-region: ${AWS_REGION}
         awslogs-group: ${AWS_LOG_GROUP}
         awslogs-stream: credenza-redis-backend
+        awslogs-create-group: "true"
 
   deriva-mcp:
     restart: unless-stopped
@@ -88,6 +94,7 @@ services:
         awslogs-region: ${AWS_REGION}
         awslogs-group: ${AWS_LOG_GROUP}
         awslogs-stream: mcp-core
+        awslogs-create-group: "true"
 
   deriva-chatbot:
     restart: unless-stopped
@@ -97,3 +104,22 @@ services:
         awslogs-region: ${AWS_REGION}
         awslogs-group: ${AWS_LOG_GROUP}
         awslogs-stream: mcp-ui
+        awslogs-create-group: "true"
+    # Override base labels to add root-to-chatbot redirect and Let's Encrypt
+    # cert resolver. Sequence labels replace (not merge) on overlay, so all
+    # base labels must be repeated here.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatbot.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && (PathPrefix(`/chatbot`) || Path(`/`))"
+      - "traefik.http.routers.chatbot.entrypoints=websecure"
+      - "traefik.http.routers.chatbot.tls=true"
+      - "traefik.http.routers.chatbot.tls.options=mintls13@file"
+      - "traefik.http.routers.chatbot.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.chatbot.tls.domains[0].main=${CONTAINER_HOSTNAME}"
+      - "traefik.http.routers.chatbot.priority=60"
+      - "traefik.http.routers.chatbot.middlewares=root-to-chatbot,chatbot-stripprefix"
+      - "traefik.http.services.chatbot.loadbalancer.server.port=8001"
+      - "traefik.http.middlewares.chatbot-stripprefix.stripPrefix.prefixes=/chatbot"
+      - "traefik.http.middlewares.root-to-chatbot.redirectregex.regex=^https://[^/]+/?$"
+      - "traefik.http.middlewares.root-to-chatbot.redirectregex.replacement=/chatbot/"
+      - "traefik.http.middlewares.root-to-chatbot.redirectregex.permanent=false"

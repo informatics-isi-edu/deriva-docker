@@ -43,15 +43,11 @@ services:
       start_period: 15s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.chatbot.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && (PathPrefix(`/chatbot`) || Path(`/`))"
+      - "traefik.http.routers.chatbot.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/chatbot`)"
       - "traefik.http.routers.chatbot.entrypoints=websecure"
       - "traefik.http.routers.chatbot.tls=true"
       - "traefik.http.routers.chatbot.tls.options=mintls13@file"
-      - "traefik.http.routers.chatbot.priority=50"
-      - "traefik.http.routers.chatbot.middlewares=root-to-chatbot,chatbot-stripprefix"
+      - "traefik.http.routers.chatbot.priority=51"
+      - "traefik.http.routers.chatbot.middlewares=chatbot-stripprefix"
       - "traefik.http.services.chatbot.loadbalancer.server.port=8001"
       - "traefik.http.middlewares.chatbot-stripprefix.stripPrefix.prefixes=/chatbot"
-      - "traefik.http.middlewares.root-to-chatbot.redirectregex.regex=^https://[^/]+/?$"
-      - "traefik.http.middlewares.root-to-chatbot.redirectregex.replacement=/chatbot/"
-      - "traefik.http.middlewares.root-to-chatbot.redirectregex.permanent=false
-      "

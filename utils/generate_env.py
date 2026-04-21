@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import os
 import secrets
 import string
 import sys
@@ -56,6 +57,7 @@ _ENV_SECTIONS: list[tuple[str, list[str]]] = [
         "LETSENCRYPT_EMAIL",
         "LETSENCRYPT_CERTDIR",
         "LETSENCRYPT_CA_SERVER",
+        "STACK_ENV_FILE",
     ]),
     ("Networking", [
         "HTTP_PORT",
@@ -252,8 +254,10 @@ def build_config(args: argparse.Namespace, env: str) -> DeployConfig:
     key_filename          = args.key_filename  or ""
     ca_filename           = args.ca_filename   or ""
     letsencrypt_email     = args.email or "isrd-support@isi.edu"
+    # Expand home dir at generation time -- systemd EnvironmentFile and Docker
+    # Compose do not re-expand shell variables embedded in env file values.
     letsencrypt_certdir   = (
-        "${HOME}/.deriva-docker/certs/${CONTAINER_HOSTNAME}/letsencrypt"
+        f"{os.path.expanduser('~')}/.deriva-docker/certs/{hostname}/letsencrypt"
     )
 
     # -- Auth / DB defaults --------------------------------------------------
@@ -404,6 +408,7 @@ def build_config(args: argparse.Namespace, env: str) -> DeployConfig:
         "LETSENCRYPT_EMAIL":           letsencrypt_email,
         "LETSENCRYPT_CERTDIR":         letsencrypt_certdir,
         "LETSENCRYPT_CA_SERVER":       args.letsencrypt_ca_server,
+        "STACK_ENV_FILE":              str(env_file),
 
         "HTTP_PORT":   "80",
         "HTTPS_PORT":  "443",

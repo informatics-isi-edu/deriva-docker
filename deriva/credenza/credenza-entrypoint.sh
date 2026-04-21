@@ -4,6 +4,23 @@ set -e
 source /usr/local/lib/utils.sh
 source /usr/local/lib/runtime.sh
 
+# CREDENZA_REGEN_CONFIGS: set to "true" to regenerate config files from
+# templates even when the destination already exists. Default is "false" --
+# existing files are preserved so operator customisations survive restarts.
+# Secrets files (/credenza/secrets/) are always regenerated from env vars
+# and are not affected by this flag.
+CREDENZA_REGEN_CONFIGS="${CREDENZA_REGEN_CONFIGS:-false}"
+
+generate_config() {
+  local src="$1" dest="$2"
+  shift 2
+  if [[ "$CREDENZA_REGEN_CONFIGS" == "true" || ! -f "$dest" ]]; then
+    substitute_env_vars "$src" "$dest" "$@"
+  else
+    echo "Skipping $dest (exists; set CREDENZA_REGEN_CONFIGS=true to regenerate)"
+  fi
+}
+
 # Suppress cert verify warnings in test environments
 if [[ "$DEPLOY_ENV" != "prod" && "$DEPLOY_ENV" != "staging" && "$DEPLOY_ENV" != "dev" ]]; then
   export PYTHONWARNINGS="ignore:Unverified HTTPS request"
@@ -59,7 +76,8 @@ if require_envs GLOBUS_CLIENT_ID GLOBUS_CLIENT_SECRET; then
      '${CLIENT_ID} ${CLIENT_SECRET}'
   fi
 fi
-substitute_env_vars "/credenza/config/oidc_idp_profiles.json.in" \
+
+generate_config "/credenza/config/oidc_idp_profiles.json.in" \
  "/credenza/config/oidc_idp_profiles.json"
 
 inject_secret /run/secrets/mcp_client_secret DERIVA_MCP_CLIENT_SECRET
@@ -67,7 +85,7 @@ if require_envs DERIVA_MCP_CLIENT_SECRET; then
   export HASHED_DERIVA_MCP_CLIENT_SECRET=$(python3 -c \
     "from argon2 import PasswordHasher; import sys; print(PasswordHasher().hash(sys.stdin.read().strip()))" \
     <<< "${DERIVA_MCP_CLIENT_SECRET}")
-  substitute_env_vars "/credenza/config/client_registry.json.in" "/credenza/config/client_registry.json" \
+  generate_config "/credenza/config/client_registry.json.in" "/credenza/config/client_registry.json" \
    '${HASHED_DERIVA_MCP_CLIENT_SECRET}'
 fi
 
