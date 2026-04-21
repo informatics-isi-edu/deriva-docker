@@ -1,0 +1,99 @@
+# AWS deployment overrides for the lean MCP stack:
+#   Traefik (rproxy-letsencrypt + traefik-docker-proxy)
+#   deriva-mcp-core, deriva-mcp-ui, credenza-redis
+#
+# This file is a compose override -- it patches specific properties on top of
+# docker-compose.yml for an EC2 deployment that does not run the full deriva-docker
+# web stack (no postgres, rabbitmq, keycloak, jupyter, apache, monitoring stack).
+#
+# Usage (set in generated env file via utils/generate-env.sh --enable-mcp-aws):
+#
+#   COMPOSE_FILE=docker-compose.yml:docker-compose-mcp-aws.yml
+#
+# Required env vars: AWS_REGION, AWS_LOG_GROUP
+# IAM instance role must allow: logs:CreateLogGroup, logs:CreateLogStream,
+# logs:PutLogEvents
+#
+# Additional overrides can be added here as the AWS deployment evolves:
+# resource limits (mem_limit, cpus), volume path changes for EBS mounts, etc.
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Logging stub: satisfies depends_on: logging: service_healthy on mcp-core,
+  # mcp-ui, and credenza-redis without running rsyslog. All log output goes to
+  # CloudWatch via the awslogs driver on each individual service.
+  # ---------------------------------------------------------------------------
+  logging:
+    image: busybox
+    container_name: logging-stub
+    entrypoint: []
+    command: ["sleep", "infinity"]
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 5s
+      timeout: 2s
+      retries: 1
+      start_period: 1s
+    networks:
+      - internal_network
+
+  # ---------------------------------------------------------------------------
+  # Traefik reverse proxy (Let's Encrypt variant used for AWS/prod deployments)
+  # Base compose has restart: no -- override to recover from crashes/reboots.
+  # Base compose has no logging block -- add awslogs so Traefik access and
+  # error logs land in CloudWatch alongside the application logs.
+  # ---------------------------------------------------------------------------
+  rproxy-letsencrypt:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: traefik
+
+  traefik-docker-proxy:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: traefik-docker-proxy
+
+  credenza-redis:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: credenza-redis
+
+  credenza-redis-backend:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: credenza-redis-backend
+
+  deriva-mcp:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: mcp-core
+
+  deriva-chatbot:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: mcp-ui

@@ -16,11 +16,16 @@ ENABLE_DDNS="false"
 ENABLE_MCP="false"
 ENABLE_CHATBOT="false"
 DERIVA_CHATBOT_LLM_API_KEY=""
+ENABLE_MCP_AWS="false"
+AWS_REGION="us-west-2"
+AWS_LOG_GROUP="/deriva/chatbot"
 LETSENCRYPT_EMAIL=""
 CERT_FILENAME=""
 KEY_FILENAME=""
 CA_FILENAME=""
 CERT_DIR=""
+LETSENCRYPT_CA_SERVER=""
+INSTALL_SYMLINK="false"
 
 print_help() {
   cat <<EOF
@@ -42,11 +47,21 @@ Options:
   --enable-mcp, -m                  Enable the DERIVA MCP server (deriva-mcp)
   --enable-chatbot, -b              Enable the DERIVA Chatbot UI (deriva-mcp-ui)
   --llm-api-key KEY                 LLM API key (required when --enable-chatbot is set)
+  --enable-mcp-aws                  Enable AWS overrides for the lean MCP stack (CloudWatch logging,
+                                    restart policies). Activates docker-compose-mcp-aws.yml and
+                                    disables the local monitoring stack. Implies --enable-mcp
+                                    and --enable-chatbot.
+  --aws-region REGION               AWS region for CloudWatch Logs (default: us-west-2)
+  --aws-log-group GROUP             CloudWatch log group name (default: /deriva/chatbot)
   --email EMAIL                     Let's Encrypt email address (required for dev, staging, prod)
   --cert-filename FILE              Certificate filename (optional)
   --key-filename FILE               Private key filename (optional)
   --ca-filename FILE                CA certificate filename (optional)
   --cert-dir DIR                    Certificate base directory (optional)
+  --letsencrypt-staging             Use the Let's Encrypt staging endpoint (for testing; issues untrusted certs)
+  --install, -i                     Symlink the generated env file to /etc/deriva-docker/deriva-stack.env.
+                                    Attempts directly; prints sudo commands on permission error.
+                                    Ignored with --env all.
   --help, -?                        Show this help message and exit
 
 Examples:
@@ -76,13 +91,18 @@ while [[ $# -gt 0 ]]; do
     --enable-mcp|-m) ENABLE_MCP="true"; shift ;;
     --enable-chatbot|-b) ENABLE_CHATBOT="true"; shift ;;
     --llm-api-key) DERIVA_CHATBOT_LLM_API_KEY="$2"; shift 2 ;;
+    --enable-mcp-aws) ENABLE_MCP_AWS="true"; shift ;;
+    --aws-region) AWS_REGION="$2"; shift 2 ;;
+    --aws-log-group) AWS_LOG_GROUP="$2"; shift 2 ;;
     --ermrest-admin-group) ERMREST_ADMIN_GROUP="$2"; shift 2 ;;
     --hatrac-admin-group) HATRAC_ADMIN_GROUP="$2"; shift 2 ;;
+    --install|-i) INSTALL_SYMLINK="true"; shift ;;
     --email) LETSENCRYPT_EMAIL="$2"; shift 2 ;;
     --cert-filename) CERT_FILENAME="$2"; shift 2 ;;
     --key-filename) KEY_FILENAME="$2"; shift 2 ;;
     --ca-filename) CA_FILENAME="$2"; shift 2 ;;
     --cert-dir) CERT_DIR="$2"; shift 2 ;;
+    --letsencrypt-staging) LETSENCRYPT_CA_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"; shift ;;
     --help|-?) print_help; exit 0 ;;
     *) echo "❌ Unknown option: $1"; echo "Try --help for usage."; exit 1 ;;
   esac
@@ -118,6 +138,21 @@ generate_random_string() {
 
 
 SECRET_VARS=()
+
+install_symlink() {
+  local env_file
+  env_file="$(realpath "$1")"
+  local system_dir="/etc/deriva-docker"
+  local system_link="${system_dir}/deriva-stack.env"
+
+  if mkdir -p "$system_dir" 2>/dev/null && ln -sf "$env_file" "$system_link" 2>/dev/null; then
+    echo "✅  Installed symlink: ${system_link} -> ${env_file}"
+  else
+    echo "⚠️  Permission denied. Run as root or execute manually:"
+    echo "    sudo mkdir -p ${system_dir}"
+    echo "    sudo ln -sf ${env_file} ${system_link}"
+  fi
+}
 
 # Function to generate an environment file
 generate_env_file() {
@@ -182,9 +217,6 @@ generate_env_file() {
   if [[ "$ENV" == "prod" || "$ENV" == "staging" || "$ENV" == "dev" ]]; then
     if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
       COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt,credenza-redis-backend"
-        if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
-          COMPOSE_PROFILES+=",credenza-redis-test"
-        fi
     else
       COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt"
     fi
@@ -265,6 +297,24 @@ generate_env_file() {
   [[ "$ENABLE_MCP" == "true" ]] && COMPOSE_PROFILES+=",deriva-mcp"
   [[ "$ENABLE_CHATBOT" == "true" ]] && COMPOSE_PROFILES+=",deriva-chatbot"
 
+  # AWS MCP deployment: activate mcp+chatbot, load the AWS override file, and
+  # strip the local monitoring/logging stacks (CloudWatch replaces them).
+  COMPOSE_FILE="docker-compose.yml"
+  if [[ "$ENABLE_MCP_AWS" == "true" ]]; then
+    # Ensure mcp and chatbot profiles are active (idempotent if already added above).
+    [[ "$ENABLE_MCP" != "true" ]] && COMPOSE_PROFILES+=",deriva-mcp"
+    [[ "$ENABLE_CHATBOT" != "true" ]] && COMPOSE_PROFILES+=",deriva-chatbot"
+    ENABLE_MCP="true"
+    ENABLE_CHATBOT="true"
+    COMPOSE_PROFILES="${COMPOSE_PROFILES//,deriva-monitoring-base/}"
+    COMPOSE_PROFILES="${COMPOSE_PROFILES//,deriva-monitoring-rproxy/}"
+    # MCP-only stack has no Apache web container; use Traefik-only letsencrypt profile.
+    COMPOSE_PROFILES="${COMPOSE_PROFILES//,deriva-web-rproxy-letsencrypt/,rproxy-letsencrypt}"
+    COMPOSE_FILE="docker-compose.yml:docker-compose-mcp-aws.yml"
+    # Default log group to a hostname-scoped path unless the operator overrode it explicitly.
+    [[ "$AWS_LOG_GROUP" == "/deriva/chatbot" ]] && AWS_LOG_GROUP="/aws/ec2/instance/${HOSTNAME}/chatbot"
+  fi
+
   if [[ "$ENABLE_JUPYTER" == "true" ]]; then
     if [[ "$ENABLE_KEYCLOAK" == "false" ]]; then
       echo "❌ Jupyter support requires KeyCloak to be enabled. Jupyter support will not be enabled."
@@ -308,17 +358,13 @@ generate_env_file() {
     JUPYTERHUB_CRYPT_KEY
   )
   [[ "$ENV" == "test" && "$ENABLE_CREDENZA_REDIS" == "true" ]] && SECRET_VARS+=(CREDENZA_REDIS_COMMANDER_PASSWORD)
-  # Keycloak secrets
-  if [[ "$ENABLE_KEYCLOAK" == "true" ]]; then
-    SECRET_VARS+=(
-      KEYCLOAK_DERIVA_CLIENT_SECRET
-    )
-  fi
+  # Keycloak client secret -- written unconditionally so the credenza container can always
+  # mount it as a Docker secret, even when the Keycloak IDP is not active. The entrypoint
+  # injects it optionally (|| true) and require_envs gates actual use.
+  SECRET_VARS+=(KEYCLOAK_DERIVA_CLIENT_SECRET)
   # MCP secrets
   if [[ "$ENABLE_MCP" == "true" ]]; then
-    SECRET_VARS+=(
-      MCP_CLIENT_SECRET
-    )
+    SECRET_VARS+=(MCP_CLIENT_SECRET)
   fi
 
   mkdir -p "$OUTPUT_DIR"
@@ -338,6 +384,7 @@ generate_env_file() {
 
 # Compose
 COMPOSE_PROFILES=${COMPOSE_PROFILES}
+COMPOSE_FILE=${COMPOSE_FILE}
 COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 
 # General
@@ -346,6 +393,7 @@ CONTAINER_HOSTNAME=${HOSTNAME}
 CONTAINER_HOSTNAME_INTERNAL=${INTERNAL_HOSTNAME}
 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
 LETSENCRYPT_CERTDIR=${LETSENCRYPT_CERTDIR}
+LETSENCRYPT_CA_SERVER=${LETSENCRYPT_CA_SERVER}
 
 # Networking
 HTTP_PORT=${HTTP_PORT}
@@ -393,6 +441,10 @@ DERIVA_MCP_HOSTNAME_MAP=${DERIVA_MCP_HOSTNAME_MAP}
 
 # Chatbot
 DERIVA_CHATBOT_LLM_API_KEY=${DERIVA_CHATBOT_LLM_API_KEY}
+
+# AWS CloudWatch Logs (only active when COMPOSE_FILE includes docker-compose-mcp-aws.yml)
+AWS_REGION=${AWS_REGION}
+AWS_LOG_GROUP=${AWS_LOG_GROUP}
 
 # Secrets
 SECRETS_DIR=${SECRETS_DIR}/${ENV}
@@ -455,8 +507,14 @@ if [[ "$ENV_TYPE" != "all" && ("$ENV_TYPE" == "prod" || "$ENV_TYPE" == "staging"
   exit 1
 fi
 
+# MCP-only stack has no web/postgres container; force Redis for Credenza session storage.
+if [[ "$ENABLE_MCP_AWS" == "true" ]]; then
+  ENABLE_CREDENZA_REDIS="true"
+  ENABLE_CREDENZA_ISOLATION="true"
+fi
+
 # Warn if chatbot enabled without an API key
-if [[ "$ENABLE_CHATBOT" == "true" && -z "$DERIVA_CHATBOT_LLM_API_KEY" ]]; then
+if [[ "$ENABLE_CHATBOT" == "true" || "$ENABLE_MCP_AWS" == "true" ]] && [[ -z "$DERIVA_CHATBOT_LLM_API_KEY" ]]; then
   echo "⚠️  --enable-chatbot is set but --llm-api-key was not provided."
   echo "   Set DERIVA_CHATBOT_LLM_API_KEY in the generated env file before starting the chatbot."
 fi
@@ -468,7 +526,13 @@ if [[ "$ENV_TYPE" == "all" ]]; then
     generate_env_file "$env"
     emit_envs_to_files "${SECRET_VARS[@]}" "${SECRETS_DIR}/${env}"
   done
+  if [[ "$INSTALL_SYMLINK" == "true" ]]; then
+    echo "⚠️  --install is not supported with --env all; skipping symlink."
+  fi
 else
   generate_env_file "$ENV_TYPE"
   emit_envs_to_files "${SECRET_VARS[@]}" "${SECRETS_DIR}/${ENV_TYPE}"
+  if [[ "$INSTALL_SYMLINK" == "true" ]]; then
+    install_symlink "$ENV_FILE"
+  fi
 fi

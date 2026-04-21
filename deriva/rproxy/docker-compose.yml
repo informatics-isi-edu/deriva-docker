@@ -58,6 +58,7 @@ services:
       service: traefik
     environment:
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - LETSENCRYPT_CA_SERVER=${LETSENCRYPT_CA_SERVER:-}
     volumes:
       - ./conf/:/etc/traefik/config
       - ./entrypoint.sh:/entrypoint.sh
@@ -87,6 +88,7 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.caserver=${LETSENCRYPT_CA_SERVER:-https://acme-v02.api.letsencrypt.org/directory}"
 
   # Limit Traefik's access to the docker environment
   traefik-docker-proxy:

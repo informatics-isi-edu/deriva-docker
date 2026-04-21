@@ -12,7 +12,8 @@ fi
 # inject secrets into env
 inject_secret /run/secrets/credenza_db_password CREDENZA_DB_PASSWORD
 inject_secret /run/secrets/credenza_encryption_key CREDENZA_ENCRYPTION_KEY
-inject_secret /run/secrets/keycloak_deriva_client_secret KEYCLOAK_CLIENT_SECRET
+# optional; only used when Keycloak IDP is configured
+inject_secret /run/secrets/keycloak_deriva_client_secret KEYCLOAK_CLIENT_SECRET || true
 
 # Emit keycloak_client_secret.json from env vars (if secret is defined)
 mkdir -p /credenza/secrets
@@ -30,19 +31,33 @@ if require_envs OKTA_CLIENT_ID OKTA_CLIENT_SECRET; then
   substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
    '${CLIENT_ID} ${CLIENT_SECRET}'
 fi
-if require_envs COGNITO_CLIENT_ID COGNITO_CLIENT_SECRET COGNITO_NATIVE_CLIENT_ID; then
-  export CLIENT_ID=${COGNITO_CLIENT_ID} CLIENT_SECRET=${COGNITO_CLIENT_SECRET} NATIVE_CLIENT_ID=${COGNITO_NATIVE_CLIENT_ID}
-  CLIENT_SECRET_FILE_IN="/credenza/config/template_client_secret_native.json.in"
+if require_envs COGNITO_CLIENT_ID COGNITO_CLIENT_SECRET; then
+  export CLIENT_ID=${COGNITO_CLIENT_ID} CLIENT_SECRET=${COGNITO_CLIENT_SECRET}
   CLIENT_SECRET_FILE_OUT="/credenza/secrets/cognito_client_secret.json"
-  substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
-   '${CLIENT_ID} ${CLIENT_SECRET} ${NATIVE_CLIENT_ID}'
+  if require_envs COGNITO_NATIVE_CLIENT_ID; then
+    export NATIVE_CLIENT_ID=${COGNITO_NATIVE_CLIENT_ID}
+    CLIENT_SECRET_FILE_IN="/credenza/config/template_client_secret_native.json.in"
+    substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
+     '${CLIENT_ID} ${CLIENT_SECRET} ${NATIVE_CLIENT_ID}'
+  else
+    CLIENT_SECRET_FILE_IN="/credenza/config/template_client_secret.json.in"
+    substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
+     '${CLIENT_ID} ${CLIENT_SECRET}'
+  fi
 fi
-if require_envs GLOBUS_CLIENT_ID GLOBUS_CLIENT_SECRET GLOBUS_NATIVE_CLIENT_ID; then
-  export CLIENT_ID=${GLOBUS_CLIENT_ID} CLIENT_SECRET=${GLOBUS_CLIENT_SECRET} NATIVE_CLIENT_ID=${GLOBUS_NATIVE_CLIENT_ID}
-  CLIENT_SECRET_FILE_IN="/credenza/config/template_client_secret_native.json.in"
+if require_envs GLOBUS_CLIENT_ID GLOBUS_CLIENT_SECRET; then
+  export CLIENT_ID=${GLOBUS_CLIENT_ID} CLIENT_SECRET=${GLOBUS_CLIENT_SECRET}
   CLIENT_SECRET_FILE_OUT="/credenza/secrets/globus_client_secret.json"
-  substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
-   '${CLIENT_ID} ${CLIENT_SECRET} ${NATIVE_CLIENT_ID}'
+  if require_envs GLOBUS_NATIVE_CLIENT_ID; then
+    export NATIVE_CLIENT_ID=${GLOBUS_NATIVE_CLIENT_ID}
+    CLIENT_SECRET_FILE_IN="/credenza/config/template_client_secret_native.json.in"
+    substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
+     '${CLIENT_ID} ${CLIENT_SECRET} ${NATIVE_CLIENT_ID}'
+  else
+    CLIENT_SECRET_FILE_IN="/credenza/config/template_client_secret.json.in"
+    substitute_env_vars ${CLIENT_SECRET_FILE_IN} ${CLIENT_SECRET_FILE_OUT} \
+     '${CLIENT_ID} ${CLIENT_SECRET}'
+  fi
 fi
 substitute_env_vars "/credenza/config/oidc_idp_profiles.json.in" \
  "/credenza/config/oidc_idp_profiles.json"

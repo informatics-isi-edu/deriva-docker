@@ -52,10 +52,10 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 # a .pth editable link back to the source tree (which won't exist at runtime).
 RUN uv sync --frozen --no-dev --no-editable --extra rag
 
-## Local plugin testing: copy facebase-deriva-mcp-plugin source into
-##   deriva-docker/deriva/mcp/src/facebase-deriva-mcp-plugin/
-## to activate. When pyproject.toml is absent only the .placeholder is present
-## and this step is a no-op. --no-deps avoids resolving deriva-mcp-core from PyPI.
+# Local plugin testing: copy facebase-deriva-mcp-plugin source into
+#   deriva-docker/deriva/mcp/src/facebase-deriva-mcp-plugin/
+# to activate. When pyproject.toml is absent only the .placeholder is present
+# and this step is a no-op. --no-deps avoids resolving deriva-mcp-core from PyPI.
 #COPY src/facebase-deriva-mcp-plugin ./facebase-deriva-mcp-plugin
 #RUN if [ -f "./facebase-deriva-mcp-plugin/pyproject.toml" ]; then \
 #      echo "Installing facebase-deriva-mcp-plugin from local source..."; \

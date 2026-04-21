@@ -17,13 +17,15 @@
         service: rsyslog
     database:
       profiles:
-        - deriva-base
+        - deriva-web-rproxy
+        - deriva-web-rproxy-letsencrypt
       extends:
         file: database/docker-compose.yml
         service: postgres
     queue:
       profiles:
-        - deriva-base
+        - deriva-web-rproxy
+        - deriva-web-rproxy-letsencrypt
       extends:
         file: queue/docker-compose.yml
         service: rabbitmq
@@ -54,6 +56,14 @@
     rproxy-letsencrypt:
       profiles:
         - rproxy-letsencrypt
+      extends:
+        file: rproxy/docker-compose.yml
+        service: traefik-letsencrypt
+      depends_on:
+        traefik-docker-proxy:
+          condition: service_started
+    rproxy-letsencrypt-web:
+      profiles:
         - deriva-web-rproxy-letsencrypt
       extends:
         file: rproxy/docker-compose.yml
@@ -66,6 +76,7 @@
     traefik-docker-proxy:
       profiles:
         - rproxy
+        - rproxy-letsencrypt
         - deriva-web-rproxy
         - deriva-web-rproxy-letsencrypt
       extends:
@@ -73,7 +84,7 @@
         service: traefik-docker-proxy
 
     # Credenza REDIS backend services
-    credenza-redis:
+    credenza-redis-backend:
       profiles:
         - credenza-redis-backend
       extends:
@@ -86,6 +97,30 @@
       extends:
         file: redis/docker-compose.yml
         service: credenza-redis-commander
+      restart: no
+
+    # Credenza Postgres container
+    credenza-postgres:
+      profiles:
+        - credenza-postgres
+      extends:
+        file: credenza/docker-compose.yml
+        service: credenza
+      depends_on:
+        database:
+          condition: service_healthy
+      restart: no
+
+    # Credenza Redis container
+    credenza-redis:
+      profiles:
+        - credenza-redis
+      extends:
+        file: credenza/docker-compose.yml
+        service: credenza
+      depends_on:
+        credenza-redis-backend:
+          condition: service_healthy
       restart: no
 
     # Credenza Postgres test/dev container
