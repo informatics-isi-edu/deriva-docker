@@ -55,6 +55,29 @@ else
   echo "  Run generate-env.sh --install first, then: docker compose build --pull"
 fi
 
+# ---------------------------------------------------------------------------
+# Seed operator config files into config-mnt directories.
+# These paths are bind-mounted by docker-compose-mcp-aws.yml so operator
+# edits persist across image rebuilds and git pulls.
+# cp -n skips files that already exist to preserve operator customisations.
+# ---------------------------------------------------------------------------
+echo ""
+echo "[install-mcp-stack] Seeding operator config files..."
+for entry in \
+  "mcp/config/deriva-mcp.env:mcp/config-mnt/deriva-mcp.env" \
+  "mcp-ui/config/deriva-mcp-ui.env:mcp-ui/config-mnt/deriva-mcp-ui.env"
+do
+  src="$WORK_DIR/${entry%%:*}"
+  dest="$WORK_DIR/${entry##*:}"
+  mkdir -p "$(dirname "$dest")"
+  if [[ -f "$dest" ]]; then
+    echo "  Skipping $dest (already exists)"
+  else
+    cp "$src" "$dest"
+    echo "  Seeded $dest"
+  fi
+done
+
 echo ""
 echo "[install-mcp-stack] Done. To start the stack:"
 echo "  systemctl start deriva-mcp"
