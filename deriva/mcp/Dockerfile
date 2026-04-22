@@ -47,6 +47,9 @@ RUN if [ "$GIT_FETCH" = "1" ] || [ ! -f "./deriva-mcp-core/pyproject.toml" ]; th
 WORKDIR /deriva-mcp-core
 
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+# Disable uv's download cache inside the build overlay -- Docker layer caching
+# already handles reproducibility, so the uv cache only wastes disk space.
+ENV UV_NO_CACHE=1
 # uv.lock pins all transitive deps for reproducible builds.
 # --no-editable installs the package into site-packages rather than using
 # a .pth editable link back to the source tree (which won't exist at runtime).

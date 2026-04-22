@@ -39,6 +39,9 @@ RUN if [ "$GIT_FETCH" = "1" ] || [ ! -f "./deriva-mcp-ui/pyproject.toml" ]; then
 WORKDIR /deriva-mcp-ui
 
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+# Disable uv's download cache inside the build overlay -- Docker layer caching
+# already handles reproducibility, so the uv cache only wastes disk space.
+ENV UV_NO_CACHE=1
 RUN if [ -n "$DERIVA_MCP_UI_STORAGE_BACKEND" ]; then \
       uv sync --frozen --no-dev --no-editable --extra "$DERIVA_MCP_UI_STORAGE_BACKEND"; \
     else \
