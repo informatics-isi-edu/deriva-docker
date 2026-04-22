@@ -99,6 +99,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 COPY config/rsyslog.conf /etc/rsyslog.conf
+COPY config/ /etc/deriva-mcp/
+COPY config/ /etc/deriva-mcp-defaults/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 

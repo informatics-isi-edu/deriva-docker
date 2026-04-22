@@ -95,11 +95,11 @@ services:
         awslogs-group: ${AWS_LOG_GROUP}
         awslogs-stream: mcp-core
         awslogs-create-group: "true"
-    # Operator-customisable env file mounted from EBS-persistent path.
-    # Seeded from repo defaults by install-mcp-stack.sh on first deploy.
+    # Operator config dir mounted from EBS-persistent path.
+    # Entrypoint seeds missing files from image defaults on first start.
     # Sequence volumes replace (not merge) on overlay -- all base volumes repeated.
     volumes:
-      - ./mcp/config-mnt/deriva-mcp.env:/etc/deriva-mcp/deriva-mcp.env
+      - ./mcp/config-mnt:/etc/deriva-mcp
       - ../certs:/certs-ext:ro
       - deriva_mcp_data:/var/lib/deriva-mcp/data
 
@@ -112,12 +112,12 @@ services:
         awslogs-group: ${AWS_LOG_GROUP}
         awslogs-stream: mcp-ui
         awslogs-create-group: "true"
-    # Operator-customisable env file mounted from EBS-persistent path.
-    # Seeded from repo defaults by install-mcp-stack.sh on first deploy.
+    # Operator config dir mounted from EBS-persistent path.
+    # Entrypoint seeds missing files from image defaults on first start.
     # Sequence volumes replace (not merge) on overlay -- all base volumes repeated.
     volumes:
       - deriva_chatbot_data:/var/lib/deriva-chatbot
-      - ./mcp-ui/config-mnt/deriva-mcp-ui.env:/etc/deriva-mcp-ui/deriva-mcp-ui.env
+      - ./mcp-ui/config-mnt:/etc/deriva-mcp-ui
       - ../certs:/certs-ext:ro
     # Override base labels to add root-to-chatbot redirect and Let's Encrypt
     # cert resolver. Sequence labels replace (not merge) on overlay, so all

@@ -20,6 +20,20 @@ if [[ -n "$CA_FILENAME" && -f "$CERT_CA_PATH" ]]; then
     update-ca-certificates
 fi
 
+# Seed any files missing from /etc/deriva-mcp/ (e.g. when a bind-mount is
+# used for operator customization and the mount dir is empty on first deploy).
+# Files that already exist are never overwritten -- operator edits are preserved.
+if [[ -d /etc/deriva-mcp-defaults ]]; then
+  for _f in /etc/deriva-mcp-defaults/*; do
+    _base="$(basename "$_f")"
+    if [[ ! -f "/etc/deriva-mcp/$_base" ]]; then
+      echo "Seeding /etc/deriva-mcp/$_base from image defaults"
+      cp "$_f" "/etc/deriva-mcp/$_base"
+    fi
+  done
+  unset _f _base
+fi
+
 # Inject client secret from Docker secret file into the expected env var
 inject_secret /run/secrets/mcp_client_secret DERIVA_MCP_CLIENT_SECRET
 

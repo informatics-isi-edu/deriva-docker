@@ -72,6 +72,8 @@ ENV PYTHONUNBUFFERED=1
 RUN mkdir -p /var/lib/deriva-chatbot
 
 COPY config/rsyslog.conf /etc/rsyslog.conf
+COPY config/ /etc/deriva-mcp-ui/
+COPY config/ /etc/deriva-mcp-ui-defaults/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
