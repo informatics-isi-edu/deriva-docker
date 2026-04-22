@@ -45,7 +45,7 @@ services:
   # error logs land in CloudWatch alongside the application logs.
   # ---------------------------------------------------------------------------
   rproxy-letsencrypt:
-    restart: unless-stopped
+    restart: on-failure:5
     logging:
       driver: awslogs
       options:
@@ -55,7 +55,7 @@ services:
         awslogs-create-group: "true"
 
   traefik-docker-proxy:
-    restart: unless-stopped
+    restart: on-failure:5
     logging:
       driver: awslogs
       options:
@@ -65,7 +65,7 @@ services:
         awslogs-create-group: "true"
 
   credenza-redis:
-    restart: unless-stopped
+    restart: on-failure:5
     logging:
       driver: awslogs
       options:
@@ -77,7 +77,7 @@ services:
       - ./credenza/config-mnt:/credenza/config
 
   credenza-redis-backend:
-    restart: unless-stopped
+    restart: on-failure:5
     logging:
       driver: awslogs
       options:
@@ -87,7 +87,7 @@ services:
         awslogs-create-group: "true"
 
   deriva-mcp:
-    restart: unless-stopped
+    restart: on-failure:5
     logging:
       driver: awslogs
       options:
@@ -104,7 +104,7 @@ services:
       - deriva_mcp_data:/var/lib/deriva-mcp/data
 
   deriva-chatbot:
-    restart: unless-stopped
+    restart: on-failure:5
     logging:
       driver: awslogs
       options:
