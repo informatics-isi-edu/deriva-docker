@@ -26,7 +26,7 @@ services:
       - CA_FILENAME=${CA_FILENAME:-}
     volumes:
       - deriva_chatbot_data:/var/lib/deriva-chatbot
-      - ./config/deriva-mcp-ui.env:/etc/deriva-mcp-ui/deriva-mcp-ui.env
+      - ./config:/etc/deriva-mcp-ui
       - ../certs:/certs-ext:ro
     logging:
       driver: syslog

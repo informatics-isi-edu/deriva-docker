@@ -23,7 +23,7 @@ services:
       # CA filename to install from /certs-ext (set to empty string to skip).
       - CA_FILENAME=${CA_FILENAME:-}
     volumes:
-      - ./config/deriva-mcp.env:/etc/deriva-mcp/deriva-mcp.env
+      - ./config:/etc/deriva-mcp
       - ../certs:/certs-ext:ro
       - deriva_mcp_data:/var/lib/deriva-mcp/data
     secrets:
