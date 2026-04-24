@@ -71,7 +71,7 @@ services:
       service: credenza
     volumes:
 #      - ./secrets:/credenza/secrets # this can be uncommented to provide an externally mounted secrets override
-#      - ./config-mnt:/credenza/config # this can be uncommented to provide an externally mounted config override
-      - ../../../credenza:/credenza  # Optional for live code editing
+      - ./config-mnt:/credenza/config # this can be uncommented to provide an externally mounted config override
+      - ../../../credenza/credenza:/credenza/credenza  # Optional for live code editing
     profiles:
       - credenza-test

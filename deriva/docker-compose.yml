@@ -62,6 +62,9 @@
       depends_on:
         traefik-docker-proxy:
           condition: service_started
+        deriva-chatbot:
+          condition: service_healthy
+          required: false
     rproxy-letsencrypt-web:
       profiles:
         - deriva-web-rproxy-letsencrypt
@@ -256,6 +259,13 @@
       extends:
         file: mcp/docker-compose.yml
         service: deriva-mcp
+      depends_on:
+        credenza-redis:
+          condition: service_healthy
+          required: false
+        credenza-postgres:
+          condition: service_healthy
+          required: false
 
     # Chatbot UI
     deriva-chatbot:
@@ -264,6 +274,16 @@
       extends:
         file: mcp-ui/docker-compose.yml
         service: deriva-chatbot
+      depends_on:
+        deriva-mcp:
+          condition: service_healthy
+          required: false
+        credenza-redis:
+          condition: service_healthy
+          required: false
+        credenza-postgres:
+          condition: service_healthy
+          required: false
 
     # DDNS Automatic Updater
     ddns-updater:

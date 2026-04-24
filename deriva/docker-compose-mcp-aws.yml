@@ -46,6 +46,9 @@ services:
   # ---------------------------------------------------------------------------
   rproxy-letsencrypt:
     restart: on-failure:5
+    depends_on:
+      deriva-chatbot:
+        condition: service_healthy
     logging:
       driver: awslogs
       options:
@@ -88,6 +91,9 @@ services:
 
   deriva-mcp:
     restart: on-failure:5
+    depends_on:
+      credenza-redis:
+        condition: service_healthy
     logging:
       driver: awslogs
       options:
@@ -105,6 +111,11 @@ services:
 
   deriva-chatbot:
     restart: on-failure:5
+    depends_on:
+      deriva-mcp:
+        condition: service_healthy
+      credenza-redis:
+        condition: service_healthy
     logging:
       driver: awslogs
       options:
