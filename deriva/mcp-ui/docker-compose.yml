@@ -26,8 +26,9 @@ services:
       - CA_FILENAME=${CA_FILENAME:-}
     volumes:
       - deriva_chatbot_data:/var/lib/deriva-chatbot
-      - ./config:/etc/deriva-mcp-ui
       - ../certs:/certs-ext:ro
+      - ./config:/etc/deriva-mcp-ui
+#      - ./config-mnt:/etc/deriva-mcp-ui # this can be uncommented to provide an externally mounted config override
     logging:
       driver: syslog
       options:
@@ -51,3 +52,13 @@ services:
       - "traefik.http.routers.chatbot.middlewares=chatbot-stripprefix"
       - "traefik.http.services.chatbot.loadbalancer.server.port=8001"
       - "traefik.http.middlewares.chatbot-stripprefix.stripPrefix.prefixes=/chatbot"
+
+  deriva-chatbot-test:
+    container_name: deriva-chatbot-test
+    extends:
+      service: deriva-chatbot
+    volumes:
+      - ../../../deriva-mcp-ui/src:/deriva-mcp-ui/src   # live source override
+      - ./config-mnt:/etc/deriva-mcp-ui # this can be uncommented to provide an externally mounted config override
+    profiles:
+      - deriva-chatbot-test

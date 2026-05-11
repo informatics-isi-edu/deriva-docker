@@ -253,6 +253,8 @@ generate_env_file() {
       ENABLE_KEYCLOAK="true"
       ENABLE_JUPYTER="true"
       ENABLE_MCP="true"
+      ENABLE_CHATBOT="true"
+      CREDENZA_DEBUG="true"
       if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
         COMPOSE_PROFILES+=",deriva-web-rproxy,credenza-redis-backend,credenza-redis-commander,test"
         if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
@@ -293,8 +295,16 @@ generate_env_file() {
   [[ "$ENABLE_KEYCLOAK" == "true" ]] && COMPOSE_PROFILES+=",deriva-auth-keycloak"
   [[ "$ENABLE_GROUPS" == "true" ]] && COMPOSE_PROFILES+=",deriva-groups"
   [[ "$ENABLE_DDNS" == "true" ]] && COMPOSE_PROFILES+=",ddns-update"
-  [[ "$ENABLE_MCP" == "true" ]] && COMPOSE_PROFILES+=",deriva-mcp"
-  [[ "$ENABLE_CHATBOT" == "true" ]] && COMPOSE_PROFILES+=",deriva-chatbot"
+  if [[ "$ENABLE_MCP" == "true" ]]; then
+    if [[ "$ENV" == "test" ]]; then COMPOSE_PROFILES+=",deriva-mcp-test"
+    else COMPOSE_PROFILES+=",deriva-mcp"
+    fi
+  fi
+  if [[ "$ENABLE_CHATBOT" == "true" ]]; then
+    if [[ "$ENV" == "test" ]]; then COMPOSE_PROFILES+=",deriva-chatbot-test"
+    else COMPOSE_PROFILES+=",deriva-chatbot"
+    fi
+  fi
 
   # AWS MCP deployment: activate mcp+chatbot, load the AWS override file, and
   # strip the local monitoring/logging stacks (CloudWatch replaces them).

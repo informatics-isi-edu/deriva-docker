@@ -66,7 +66,17 @@ elif [[ -f "$DOCKER_DAEMON_JSON" ]]; then
   echo "[install-system] WARNING: ${DOCKER_DAEMON_JSON} exists without data-root. Add manually:"
   echo "  \"data-root\": \"${DOCKER_DATA_ROOT}\""
 else
-  echo "{ \"data-root\": \"${DOCKER_DATA_ROOT}\" }" > "$DOCKER_DAEMON_JSON"
+  cat > "$DOCKER_DAEMON_JSON" <<EOF
+{
+  "data-root": "${DOCKER_DATA_ROOT}",
+  "builder": {
+    "gc": {
+      "enabled": true,
+      "defaultKeepStorage": "2GB"
+    }
+  }
+}
+EOF
   echo "[install-system] Written ${DOCKER_DAEMON_JSON}"
   if systemctl is-active --quiet docker; then
     echo "[install-system] Restarting Docker to apply data-root change..."

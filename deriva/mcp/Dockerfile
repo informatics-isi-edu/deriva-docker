@@ -95,6 +95,7 @@ COPY --from=isrddev/deriva-base:latest /usr/local/lib/*.sh /usr/local/lib/
 
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONPATH=/deriva-mcp-core/src
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 

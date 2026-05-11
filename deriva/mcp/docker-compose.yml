@@ -23,9 +23,10 @@ services:
       # CA filename to install from /certs-ext (set to empty string to skip).
       - CA_FILENAME=${CA_FILENAME:-}
     volumes:
-      - ./config:/etc/deriva-mcp
-      - ../certs:/certs-ext:ro
       - deriva_mcp_data:/var/lib/deriva-mcp/data
+      - ../certs:/certs-ext:ro
+      - ./config:/etc/deriva-mcp
+#      - ./config-mnt:/etc/deriva-mcp # this can be uncommented to provide an externally mounted config override
     secrets:
       - mcp_client_secret
     logging:
@@ -58,3 +59,13 @@ services:
       - "traefik.http.routers.mcp-wellknown.tls=true"
       - "traefik.http.routers.mcp-wellknown.tls.options=mintls13@file"
       - "traefik.http.routers.mcp-wellknown.service=mcp"
+
+  deriva-mcp-test:
+    container_name: deriva-mcp-test
+    extends:
+      service: deriva-mcp
+    volumes:
+      - ../../../deriva-mcp-core/src:/deriva-mcp-core/src   # live source override
+#      - ./config-mnt:/etc/deriva-mcp # this can be uncommented to provide an externally mounted config override
+    profiles:
+      - deriva-mcp-test

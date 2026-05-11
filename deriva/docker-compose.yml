@@ -285,6 +285,39 @@
           condition: service_healthy
           required: false
 
+    # MCP Server - live code edit variant (mcp-test profile)
+    deriva-mcp-test:
+      profiles:
+        - deriva-mcp-test
+      extends:
+        file: mcp/docker-compose.yml
+        service: deriva-mcp-test
+      depends_on:
+        credenza-redis:
+          condition: service_healthy
+          required: false
+        credenza-postgres:
+          condition: service_healthy
+          required: false
+
+    # Chatbot UI - live code edit variant (chatbot-test profile)
+    deriva-chatbot-test:
+      profiles:
+        - deriva-chatbot-test
+      extends:
+        file: mcp-ui/docker-compose.yml
+        service: deriva-chatbot-test
+      depends_on:
+        deriva-mcp-test:
+          condition: service_healthy
+          required: false
+        credenza-redis:
+          condition: service_healthy
+          required: false
+        credenza-postgres:
+          condition: service_healthy
+          required: false
+
     # DDNS Automatic Updater
     ddns-updater:
       profiles:
