@@ -55,16 +55,6 @@ ENV UV_NO_CACHE=1
 # a .pth editable link back to the source tree (which won't exist at runtime).
 RUN uv sync --frozen --no-dev --no-editable --extra rag
 
-# Local plugin testing: copy facebase-deriva-mcp-plugin source into
-#   deriva-docker/deriva/mcp/src/facebase-deriva-mcp-plugin/
-# to activate. When pyproject.toml is absent only the .placeholder is present
-# and this step is a no-op. --no-deps avoids resolving deriva-mcp-core from PyPI.
-#COPY src/facebase-deriva-mcp-plugin ./facebase-deriva-mcp-plugin
-#RUN if [ -f "./facebase-deriva-mcp-plugin/pyproject.toml" ]; then \
-#      echo "Installing facebase-deriva-mcp-plugin from local source..."; \
-#      uv pip install --python /opt/venv --no-deps ./facebase-deriva-mcp-plugin; \
-#    fi
-
 # Install any extra plugin packages declared at build time.
 # Each package must declare the deriva_mcp.plugins entry point to be loaded.
 # --no-sources: plugin pyproject.toml files may contain [tool.uv.sources] path
@@ -72,6 +62,11 @@ RUN uv sync --frozen --no-dev --no-editable --extra rag
 # uv pip install reads those overrides and fails when the relative path does not
 # exist in the build context. --no-sources ignores them and resolves dependencies
 # from PyPI instead.
+# LIMITATION: --no-sources is all-or-nothing. If a plugin depends on a package
+# that is only available via git (not on PyPI at the required version), that
+# dependency must also be listed explicitly in EXTRA_PACKAGES as a git URL, e.g.:
+#   EXTRA_PACKAGES="dep@git+https://github.com/org/dep.git@main plugin@git+..."
+# uv resolves all EXTRA_PACKAGES together so git-URL entries satisfy constraints.
 RUN if [ -n "$EXTRA_PACKAGES" ]; then \
       echo "Installing extra packages: $EXTRA_PACKAGES"; \
       uv pip install --python /opt/venv --no-sources $EXTRA_PACKAGES; \
