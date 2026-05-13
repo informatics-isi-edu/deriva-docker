@@ -87,38 +87,6 @@
         "https://localhost/mcp": "Connect to the DERIVA MCP Server at this URL"
       },
       "max_session_ttl_seconds": 28800
-    },
-
-    "aws-deriva-etl-test-ec2": {
-      "desc": "AWS EC2 ETL Ingest client (role-based)",
-      "enabled": true,
-      "adapter": {
-        "name": "aws_presigned",
-        "role_arn": "arn:aws:iam::812117085036:role/credenza-service-auth-test-role"
-      },
-      "allowed_grant_types": [
-        "client_credentials"
-      ],
-      "allowed_resources": [
-        "urn:deriva:rest:service:all"
-      ],
-      "allowed_scopes": [
-        "aws-deriva-etl-ingest"
-      ],
-      "default_scopes": [
-        "aws-deriva-etl-ingest"
-      ],
-      "max_session_ttl_seconds": 7200,
-      "absolute_session_lifetime_seconds": 86400,
-      "additional_claims": {
-        "username": "deriva-etl-service",
-        "name": "AWS EC2 DERIVA Data Ingest Service Account",
-        "email": "isrd-support@isi.edu",
-        "claims": [
-          {"id": "admins", "display_name": "ETL Admins"},
-          {"id": "curators", "display_name": "ETL Curators"}
-        ]
-      }
     }
   }
 }
