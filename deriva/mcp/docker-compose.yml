@@ -5,6 +5,19 @@ services:
       args:
         DERIVA_MCP_CORE_GIT_BRANCH: ${DERIVA_MCP_CORE_GIT_BRANCH:-main}
         EXTRA_PACKAGES: ${DERIVA_MCP_EXTRA_PACKAGES:-}
+        # Workflow provenance built into the image at build time. These
+        # become DERIVA_MCP_VERSION / DERIVA_MCP_GIT_COMMIT ENVs inside
+        # the runtime image; deriva-ml reads them during Workflow
+        # construction to skip git-binary introspection. See
+        # deriva/mcp/Dockerfile for the contract. Either set both in
+        # your env file or override on the build command line:
+        #   DERIVA_MCP_VERSION=v1.2.3 DERIVA_MCP_GIT_COMMIT=$(git -C ... rev-parse HEAD) \
+        #     docker-compose build deriva-mcp
+        # Empty values produce empty workflow url/checksum (still
+        # better than the git-fallback crash; the deriva-ml validator
+        # tolerates missing checksum -- see reproducibility.md).
+        VERSION: ${DERIVA_MCP_VERSION:-}
+        GIT_COMMIT: ${DERIVA_MCP_GIT_COMMIT:-}
        # GIT_FETCH: 1
     container_name: deriva-mcp
     depends_on:
