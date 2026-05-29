@@ -1,24 +1,30 @@
 # systemd unit for the deriva lean MCP stack (mcp-core + mcp-ui + credenza + traefik).
 #
-# Installation (run as root from the repo root - use /data/deriva-docker/deriva
-#                or adjust WorkingDirectory if different):
+# Installation (run as root, clone once):
 #
-#   1. Generate the env file and install the symlink to the well-known path:
+#   git clone <repo-url> /root/deriva-docker && cd /root/deriva-docker
+#
+#   1. Mount EBS and configure Docker data-root on /data:
+#        utils/sysinstall/bin/install-system.sh
+#
+#   2. Generate the env file with secrets on /data (persists across root volume
+#      replacement), then install the symlink to the well-known path:
 #        utils/generate-env.sh --env prod --hostname <host> --email <email> \
-#          --enable-mcp-aws --llm-api-key <key> --install
-#      This writes ~/.deriva-docker/env/<host>.env and symlinks it to
-#      /etc/deriva-docker/deriva-stack.env automatically.
+#          --enable-mcp-aws --llm-api-key <key> \
+#          --output-dir /data/deriva-docker/.env --install
+#      To reuse an existing env instead, copy it to /data/deriva-docker/.env/
+#      and symlink manually to /etc/deriva-docker/deriva-stack.env.
 #
-#   2. Provision the host and install the stack service:
+#   3. Install the stack (copies repo to /data/deriva-docker, pre-builds images):
 #        utils/sysinstall/bin/install-mcp-stack.sh
 #
-#   3. Start the stack:
+#   4. Start the stack:
 #        systemctl start deriva-mcp
 #
-#   4. Update the stack (rebuild images and restart):
+#   5. Update the stack (rebuild images and restart):
 #        update-stack.sh deriva-mcp
 #
-#   5. View logs:
+#   6. View logs:
 #        journalctl -u deriva-mcp -f          # systemd journal (startup/stop events)
 #        # Application logs go to CloudWatch (see AWS_LOG_GROUP in env file)
 #
@@ -26,10 +32,8 @@
 #   - Tested baseline: t3.large (2 vCPU, 8 GB RAM) + 8 GB swapfile. Swap is a
 #     safety net for chromadb/RAG memory spikes; sustained swap usage is a signal
 #     to upsize. Configure via SWAPFILE and SWAPFILE_SIZE in deriva-stack.env.
-#   - WorkingDirectory must be the deriva/ subdirectory of the repo checkout so
-#     that relative paths in COMPOSE_FILE (docker-compose.yml:docker-compose-mcp-aws.yml)
-#     resolve correctly.
-#   - Adjust WorkingDirectory if the repo is cloned to a different location.
+#   - WorkingDirectory must be the deriva/ subdirectory of the repo so that
+#     relative paths in COMPOSE_FILE resolve correctly.
 #   - Requires Docker Engine with the Compose v2 plugin; installed by install-mcp-stack.sh.
 
 [Unit]
@@ -47,7 +51,6 @@ StartLimitBurst=3
 Type=oneshot
 RemainAfterExit=yes
 
-# Repo checkout location -- adjust if cloned elsewhere.
 WorkingDirectory=/data/deriva-docker/deriva
 
 # Generated env file from utils/generate-env.sh --enable-mcp-aws.

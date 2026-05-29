@@ -288,8 +288,6 @@ def build_config(args: argparse.Namespace, env: str) -> DeployConfig:
 
         if enable_credenza_redis:
             profiles.add("credenza-redis-backend")
-            if enable_credenza_isolation:
-                profiles.add("credenza-redis-test")
 
         if enable_credenza_isolation:
             profiles.add(
@@ -301,6 +299,7 @@ def build_config(args: argparse.Namespace, env: str) -> DeployConfig:
         enable_keycloak = True
         enable_jupyter  = True
         enable_mcp      = True
+        enable_chatbot  = True
 
         # cert filenames default to cert_dir-based names in test mode.
         cert_dir      = args.cert_dir      or default_cert_dir
@@ -333,9 +332,9 @@ def build_config(args: argparse.Namespace, env: str) -> DeployConfig:
     if args.enable_ddns:
         profiles.add("ddns-update")
     if enable_mcp:
-        profiles.add("deriva-mcp")
+        profiles.add("deriva-mcp-test" if env == "test" else "deriva-mcp")
     if enable_chatbot:
-        profiles.add("deriva-chatbot")
+        profiles.add("deriva-chatbot-test" if env == "test" else "deriva-chatbot")
     if enable_jupyter:
         if not enable_keycloak:
             _warn("Jupyter requires Keycloak -- Jupyter will not be enabled.")
@@ -379,6 +378,8 @@ def build_config(args: argparse.Namespace, env: str) -> DeployConfig:
     if enable_credenza_isolation:
         authn_session_host        = internal
         authn_session_host_verify = "false"
+
+    credenza_debug = "true" if env == "test" else "false"
 
     # -- Hostname remapping for localhost ------------------------------------
 
@@ -427,7 +428,7 @@ def build_config(args: argparse.Namespace, env: str) -> DeployConfig:
         "CREDENZA_DB_USER":             "credenza",
         "CREDENZA_DB_HOST":             credenza_db_host,
         "CREDENZA_DB_PORT":             credenza_db_port,
-        "CREDENZA_DEBUG":               "false",
+        "CREDENZA_DEBUG":               credenza_debug,
         "CREDENZA_ISOLATION_ENABLED":   str(enable_credenza_isolation).lower(),
         "KEYCLOAK_IP":                  keycloak_ip,
         "KEYCLOAK_BASE_URL":            keycloak_base_url,
