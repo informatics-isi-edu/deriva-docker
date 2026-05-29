@@ -54,6 +54,7 @@ _ENV_SECTIONS: list[tuple[str, list[str]]] = [
         "DEPLOY_ENV",
         "CONTAINER_HOSTNAME",
         "CONTAINER_HOSTNAME_INTERNAL",
+        "AUTH_HOSTNAME",
         "LETSENCRYPT_EMAIL",
         "LETSENCRYPT_CERTDIR",
         "LETSENCRYPT_CA_SERVER",
@@ -406,6 +407,7 @@ def build_config(args: argparse.Namespace, env: str) -> DeployConfig:
         "DEPLOY_ENV":                 env,
         "CONTAINER_HOSTNAME":         hostname,
         "CONTAINER_HOSTNAME_INTERNAL": internal,
+        "AUTH_HOSTNAME":              args.auth_hostname or hostname,
         "LETSENCRYPT_EMAIL":           letsencrypt_email,
         "LETSENCRYPT_CERTDIR":         letsencrypt_certdir,
         "LETSENCRYPT_CA_SERVER":       args.letsencrypt_ca_server,
@@ -610,6 +612,10 @@ Examples:
         help="LLM API key (required when --enable-chatbot is set)")
 
     aws = p.add_argument_group("AWS")
+    aws.add_argument("--auth-hostname", default="", metavar="HOST",
+        help="Hostname of the credenza instance used for authentication "
+             "(default: same as --hostname). Set this when services authenticate "
+             "against a remote host's credenza rather than the local one.")
     aws.add_argument("--enable-mcp-aws", action="store_true",
         help="Enable AWS overrides for the lean MCP stack (CloudWatch logging, restart "
              "policies). Activates docker-compose-mcp-aws.yml and disables the local "

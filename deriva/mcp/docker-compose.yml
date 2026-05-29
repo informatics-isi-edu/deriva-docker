@@ -12,7 +12,7 @@ services:
         condition: service_healthy
     environment:
       - DEPLOY_ENV=${DEPLOY_ENV}
-      - DERIVA_MCP_CREDENZA_URL=https://${CONTAINER_HOSTNAME}/authn
+      - DERIVA_MCP_CREDENZA_URL=https://${AUTH_HOSTNAME}/authn
       - DERIVA_MCP_SERVER_URL=https://${CONTAINER_HOSTNAME}/mcp
       - DERIVA_MCP_SERVER_RESOURCE=https://${CONTAINER_HOSTNAME}/mcp
       - DERIVA_MCP_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY}

@@ -17,6 +17,7 @@ ENABLE_MCP="false"
 ENABLE_CHATBOT="false"
 DERIVA_CHATBOT_LLM_API_KEY=""
 ENABLE_MCP_AWS="false"
+AUTH_HOSTNAME=""
 AWS_REGION="us-west-2"
 AWS_LOG_GROUP="/deriva/chatbot"
 LETSENCRYPT_EMAIL=""
@@ -51,6 +52,10 @@ Options:
                                     restart policies). Activates docker-compose-mcp-aws.yml and
                                     disables the local monitoring stack. Implies --enable-mcp
                                     and --enable-chatbot.
+  --auth-hostname HOST              Hostname of the credenza instance used for authentication
+                                    (default: same as --hostname). Set this when services
+                                    authenticate against a remote host's credenza rather than
+                                    the local one.
   --aws-region REGION               AWS region for CloudWatch Logs (default: us-west-2)
   --aws-log-group GROUP             CloudWatch log group name (default: /deriva/chatbot)
   --email EMAIL                     Let's Encrypt email address (required for dev, staging, prod)
@@ -92,6 +97,7 @@ while [[ $# -gt 0 ]]; do
     --enable-chatbot|-b) ENABLE_CHATBOT="true"; shift ;;
     --llm-api-key) DERIVA_CHATBOT_LLM_API_KEY="$2"; shift 2 ;;
     --enable-mcp-aws) ENABLE_MCP_AWS="true"; shift ;;
+    --auth-hostname) AUTH_HOSTNAME="$2"; shift 2 ;;
     --aws-region) AWS_REGION="$2"; shift 2 ;;
     --aws-log-group) AWS_LOG_GROUP="$2"; shift 2 ;;
     --ermrest-admin-group) ERMREST_ADMIN_GROUP="$2"; shift 2 ;;
@@ -209,6 +215,8 @@ generate_env_file() {
     HOSTNAME=$ORG_HOSTNAME
     INTERNAL_HOSTNAME="deriva"
   fi
+
+  AUTH_HOSTNAME="${AUTH_HOSTNAME:-$HOSTNAME}"
 
   DEFAULT_SECRETS_DIR="${OUTPUT_DIR}/secrets/${SAFE_HOSTNAME}"
 
@@ -400,6 +408,7 @@ COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 DEPLOY_ENV=${ENV}
 CONTAINER_HOSTNAME=${HOSTNAME}
 CONTAINER_HOSTNAME_INTERNAL=${INTERNAL_HOSTNAME}
+AUTH_HOSTNAME=${AUTH_HOSTNAME}
 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
 LETSENCRYPT_CERTDIR=${LETSENCRYPT_CERTDIR}
 LETSENCRYPT_CA_SERVER=${LETSENCRYPT_CA_SERVER}
