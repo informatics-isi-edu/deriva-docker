@@ -52,14 +52,15 @@ echo "[install-mcp-stack] Running system installer..."
 # install-system.sh above ensures /data is mounted before this check.
 # ---------------------------------------------------------------------------
 if [[ "$(realpath "$REPO_ROOT")" != "$CANONICAL_DIR" ]]; then
-  if [[ -d "$CANONICAL_DIR" ]]; then
-    echo "[install-mcp-stack] ERROR: $CANONICAL_DIR already exists."
-    echo "  Either remove it or re-run this script from $CANONICAL_DIR directly."
+  if [[ -f "$CANONICAL_DIR/utils/sysinstall/bin/install-mcp-stack.sh" ]]; then
+    echo "[install-mcp-stack] ERROR: a repo is already present at $CANONICAL_DIR."
+    echo "  Re-run this script from $CANONICAL_DIR directly."
     exit 1
   fi
   echo ""
   echo "[install-mcp-stack] Copying repo to $CANONICAL_DIR..."
-  cp -a "$REPO_ROOT" "$CANONICAL_DIR"
+  mkdir -p "$CANONICAL_DIR"
+  cp -a "$REPO_ROOT/." "$CANONICAL_DIR/"
   echo "[install-mcp-stack] Re-executing from $CANONICAL_DIR..."
   exec "$CANONICAL_DIR/utils/sysinstall/bin/install-mcp-stack.sh" "$@"
 fi
