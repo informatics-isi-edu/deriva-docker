@@ -1,0 +1,3 @@
+Place a deriva-mcp-ui source checkout here for local builds.
+The Dockerfile will use this directory if pyproject.toml is present,
+otherwise it clones from GitHub (or when GIT_FETCH=1 is set).

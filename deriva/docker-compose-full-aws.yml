@@ -1,0 +1,141 @@
+# AWS deployment overrides for the full deriva stack.
+# SKETCH -- service entries for postgres, rabbitmq, apache, keycloak, and
+# jupyter still need to be added once those deployments are validated on AWS.
+#
+# Usage (set in generated env file via utils/generate-env.sh --enable-full-aws):
+#
+#   COMPOSE_FILE=docker-compose.yml:docker-compose-full-aws.yml
+#
+# Required env vars: AWS_REGION, AWS_LOG_GROUP
+# IAM instance role must allow: logs:CreateLogGroup, logs:CreateLogStream,
+# logs:PutLogEvents
+#
+# Design notes:
+#   - Local monitoring stack (Loki, Promtail, Prometheus, Grafana) is stripped;
+#     CloudWatch replaces it for all services.
+#   - EBS volume considerations: postgres data volume should be on a separate
+#     EBS volume mounted at e.g. /data/postgres. Override the pg_data volume
+#     definition here when that path is confirmed.
+#   - Keycloak: no special AWS changes expected beyond logging; add entry below
+#     once tested.
+#   - RDS: if postgres is replaced by RDS at some point, remove the database
+#     service entry and update POSTGRES_HOST in the env file to the RDS endpoint.
+#     The compose override would then also need to remove the database depends_on
+#     constraints on other services (TODO).
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Logging stub -- same pattern as docker-compose-mcp-aws.yml.
+  # ---------------------------------------------------------------------------
+  logging:
+    image: busybox
+    container_name: logging-stub
+    command: ["true"]
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 5s
+      timeout: 2s
+      retries: 1
+      start_period: 1s
+    networks:
+      - internal_network
+
+  # ---------------------------------------------------------------------------
+  # Traefik
+  # ---------------------------------------------------------------------------
+  rproxy-letsencrypt:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: traefik
+
+  rproxy-letsencrypt-web:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: traefik
+
+  traefik-docker-proxy:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: traefik-docker-proxy
+
+  # ---------------------------------------------------------------------------
+  # MCP core and chatbot UI
+  # ---------------------------------------------------------------------------
+  deriva-mcp:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: mcp-core
+    environment:
+      - DERIVA_MCP_APP_USE_SYSLOG=false
+
+  deriva-chatbot:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: mcp-ui
+    environment:
+      - DERIVA_CHATBOT_APP_USE_SYSLOG=false
+      - DERIVA_CHATBOT_ACCESS_LOGFILE_PATH=
+
+  # ---------------------------------------------------------------------------
+  # Credenza Redis session store
+  # ---------------------------------------------------------------------------
+  credenza-redis:
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: credenza-redis
+
+  # ---------------------------------------------------------------------------
+  # TODO: remaining services -- add entries as each is validated on AWS
+  #
+  # credenza:
+  #   restart: unless-stopped
+  #   logging: { driver: awslogs, options: { awslogs-region: ..., awslogs-stream-prefix: credenza } }
+  #
+  # database:   (postgres)
+  #   restart: unless-stopped
+  #   logging: { driver: awslogs, options: { awslogs-region: ..., awslogs-stream-prefix: postgres } }
+  #   # If pg_data lives on a separate EBS mount, override the volume here:
+  #   # volumes:
+  #   #   - /data/postgres:/var/lib/postgresql/data
+  #
+  # queue:      (rabbitmq)
+  #   restart: unless-stopped
+  #   logging: { driver: awslogs, options: { awslogs-region: ..., awslogs-stream-prefix: rabbitmq } }
+  #
+  # keycloak:
+  #   restart: unless-stopped
+  #   logging: { driver: awslogs, options: { awslogs-region: ..., awslogs-stream-prefix: keycloak } }
+  #
+  # web-rproxy-letsencrypt:  (apache)
+  #   restart: unless-stopped
+  #   logging: { driver: awslogs, options: { awslogs-region: ..., awslogs-stream-prefix: apache } }
+  #
+  # jupyterhub:
+  #   restart: unless-stopped
+  #   logging: { driver: awslogs, options: { awslogs-region: ..., awslogs-stream-prefix: jupyterhub } }
+  # ---------------------------------------------------------------------------

@@ -162,6 +162,15 @@ if [ ! -f "$DEPLOYMENT_MARKER_FILE" ]; then
     substitute_env_vars "/home/credenza/config/oidc_idp_profiles.json.in" \
      "/home/credenza/config/oidc_idp_profiles.json"
 
+    inject_secret /run/secrets/mcp_client_secret DERIVA_MCP_CLIENT_SECRET
+    if require_envs DERIVA_MCP_CLIENT_SECRET; then
+      export HASHED_DERIVA_MCP_CLIENT_SECRET=$(python3 -c \
+        "from argon2 import PasswordHasher; import sys; print(PasswordHasher().hash(sys.stdin.read().strip()))" \
+        <<< "${DERIVA_MCP_CLIENT_SECRET}")
+      substitute_env_vars "/home/credenza/config/client_registry.json.in" "/home/credenza/config/client_registry.json" \
+       '${HASHED_DERIVA_MCP_CLIENT_SECRET}'
+    fi
+
     su - postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='credenza'\"" | grep -q 1 \
      || su - postgres -c "createdb -O credenza credenza"
 

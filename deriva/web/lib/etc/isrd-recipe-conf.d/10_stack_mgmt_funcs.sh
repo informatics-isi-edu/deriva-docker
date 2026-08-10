@@ -31,7 +31,7 @@ isrd_prepare_repos()
 isrd_install_code()
 {
     isrddev_repo_run webauthn   make install-core
-    isrddev_repo_run credenza   make install
+    PIP_IGNORE_INSTALLED=1 isrddev_repo_run credenza   make install
     isrddev_repo_run ermrest    pip3 install .
     isrddev_repo_run hatrac     pip3 install .
     isrddev_repo_run ermresolve pip3 install .

@@ -59,6 +59,7 @@ services:
       - keycloak_deriva_client_secret
       - credenza_db_password
       - credenza_encryption_key
+      - mcp_client_secret
     healthcheck:
       test: [ "CMD", "curl", "-fk", "https://localhost:${HTTPS_PORT}/healthcheck.txt" ]
       interval: 15s

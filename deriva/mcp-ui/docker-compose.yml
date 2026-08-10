@@ -1,0 +1,64 @@
+services:
+  deriva-chatbot:
+    build:
+      context: .
+      args:
+        DERIVA_MCP_UI_GIT_BRANCH: ${DERIVA_MCP_UI_GIT_BRANCH:-main}
+        DERIVA_MCP_UI_STORAGE_BACKEND: ${DERIVA_MCP_UI_STORAGE_BACKEND:-sqlite}
+       # GIT_FETCH: 1
+    container_name: deriva-chatbot
+    depends_on:
+      logging:
+        condition: service_healthy
+    environment:
+      - DEPLOY_ENV=${DEPLOY_ENV}
+      - HOSTNAME=${CONTAINER_HOSTNAME}
+      - DERIVA_CHATBOT_CREDENZA_URL=https://${AUTH_HOSTNAME}/authn
+      - DERIVA_CHATBOT_MCP_URL=https://${CONTAINER_HOSTNAME}/mcp
+      - DERIVA_CHATBOT_MCP_RESOURCE=https://${CONTAINER_HOSTNAME}/mcp
+      - DERIVA_CHATBOT_PUBLIC_URL=https://${CONTAINER_HOSTNAME}/chatbot
+      - DERIVA_CHATBOT_HOSTNAME_MAP=${DERIVA_MCP_HOSTNAME_MAP}
+      - DERIVA_CHATBOT_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY}
+      - DERIVA_CHATBOT_LLM_API_KEY=${DERIVA_CHATBOT_LLM_API_KEY:-}
+      # Point Python requests at the system CA bundle updated by entrypoint.sh.
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      # CA filename to install from /certs-ext (set to empty string to skip).
+      - CA_FILENAME=${CA_FILENAME:-}
+    volumes:
+      - deriva_chatbot_data:/var/lib/deriva-chatbot
+      - ../certs:/certs-ext:ro
+      - ./config:/etc/deriva-mcp-ui
+#      - ./config-mnt:/etc/deriva-mcp-ui # this can be uncommented to provide an externally mounted config override
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://${RSYSLOG_IP}:514"
+        tag: "{{.Name}}"
+    networks:
+      - internal_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 4
+      start_period: 15s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatbot.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && PathPrefix(`/chatbot`)"
+      - "traefik.http.routers.chatbot.entrypoints=websecure"
+      - "traefik.http.routers.chatbot.tls=true"
+      - "traefik.http.routers.chatbot.tls.options=mintls13@file"
+      - "traefik.http.routers.chatbot.priority=51"
+      - "traefik.http.routers.chatbot.middlewares=chatbot-stripprefix"
+      - "traefik.http.services.chatbot.loadbalancer.server.port=8001"
+      - "traefik.http.middlewares.chatbot-stripprefix.stripPrefix.prefixes=/chatbot"
+
+  deriva-chatbot-test:
+    container_name: deriva-chatbot-test
+    extends:
+      service: deriva-chatbot
+    volumes:
+      - ../../../deriva-mcp-ui/src:/deriva-mcp-ui/src   # live source override
+      - ./config-mnt:/etc/deriva-mcp-ui # this can be uncommented to provide an externally mounted config override
+    profiles:
+      - deriva-chatbot-test

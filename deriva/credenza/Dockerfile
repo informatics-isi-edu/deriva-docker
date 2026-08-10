@@ -46,6 +46,13 @@ ENV PYTHONPATH=/credenza/credenza
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Config templates -- copied to two locations:
+#   /credenza/config/          working directory (may be bind-mounted by operator)
+#   /credenza/config-defaults/ read-only seed; entrypoint copies missing files
+#                              from here into /credenza/config/ on startup
+COPY config/ /credenza/config/
+COPY config/ /credenza/config-defaults/
+
 # Entrypoint
 COPY credenza-entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

@@ -1,0 +1,68 @@
+# systemd unit for the full DERIVA stack (postgres, rabbitmq, apache, keycloak,
+# credenza, traefik, mcp-core, mcp-ui, jupyter, monitoring).
+#
+# Note: docker-compose-full-aws.yml is still a sketch -- service entries for
+# postgres, rabbitmq, apache, keycloak, and jupyter need to be added once those
+# deployments are validated on AWS.
+#
+# Installation (run as root from the repo root):
+#
+#   1. Generate the env file and install the symlink to the well-known path:
+#        utils/generate-env.sh --env prod --hostname <host> --email <email> \
+#          --enable-keycloak --enable-mcp --enable-chatbot \
+#          --enable-full-aws --llm-api-key <key> --install
+#      This writes ~/.deriva-docker/env/<host>.env and symlinks it to
+#      /etc/deriva-docker/deriva-stack.env automatically.
+#
+#   2. Provision the host and install the stack service:
+#        utils/sysinstall/bin/install-full-stack.sh
+#
+#   3. Start the stack:
+#        systemctl start deriva-full
+#
+#   4. Update the stack (rebuild images and restart):
+#        update-stack.sh deriva-full
+#
+#   5. View logs:
+#        journalctl -u deriva-full -f          # systemd journal (startup/stop events)
+#        # Application logs go to CloudWatch (see AWS_LOG_GROUP in env file)
+#
+# Notes:
+#   - WorkingDirectory must be the deriva/ subdirectory of the repo checkout so
+#     that relative paths in COMPOSE_FILE resolve correctly.
+#   - Adjust WorkingDirectory if the repo is cloned to a different location.
+#   - Requires Docker Engine with the Compose v2 plugin; installed by install-full-stack.sh.
+
+[Unit]
+Description=DERIVA Full Stack (postgres, rabbitmq, apache, keycloak, credenza, traefik, mcp, monitoring)
+Documentation=https://github.com/informatics-isi-edu/deriva-docker
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+# Allow 3 restart attempts within 5 minutes before giving up and entering
+# failed state. Use 'systemctl reset-failed deriva-full' to clear and retry.
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# Repo checkout location -- adjust if cloned elsewhere.
+WorkingDirectory=/data/deriva-docker/deriva
+
+# Generated env file from utils/generate-env.sh --enable-full-aws.
+EnvironmentFile=/etc/deriva-docker/deriva-stack.env
+
+ExecStart=/usr/bin/docker compose up --detach --remove-orphans
+ExecStop=/usr/bin/docker compose down
+
+# Wait 10s between restart attempts.
+Restart=on-failure
+RestartSec=10s
+
+# Full stack has more services; postgres needs extra shutdown time.
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

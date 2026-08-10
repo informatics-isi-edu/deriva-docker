@@ -17,13 +17,15 @@
         service: rsyslog
     database:
       profiles:
-        - deriva-base
+        - deriva-web-rproxy
+        - deriva-web-rproxy-letsencrypt
       extends:
         file: database/docker-compose.yml
         service: postgres
     queue:
       profiles:
-        - deriva-base
+        - deriva-web-rproxy
+        - deriva-web-rproxy-letsencrypt
       extends:
         file: queue/docker-compose.yml
         service: rabbitmq
@@ -54,6 +56,17 @@
     rproxy-letsencrypt:
       profiles:
         - rproxy-letsencrypt
+      extends:
+        file: rproxy/docker-compose.yml
+        service: traefik-letsencrypt
+      depends_on:
+        traefik-docker-proxy:
+          condition: service_started
+        deriva-chatbot:
+          condition: service_healthy
+          required: false
+    rproxy-letsencrypt-web:
+      profiles:
         - deriva-web-rproxy-letsencrypt
       extends:
         file: rproxy/docker-compose.yml
@@ -66,6 +79,7 @@
     traefik-docker-proxy:
       profiles:
         - rproxy
+        - rproxy-letsencrypt
         - deriva-web-rproxy
         - deriva-web-rproxy-letsencrypt
       extends:
@@ -73,7 +87,7 @@
         service: traefik-docker-proxy
 
     # Credenza REDIS backend services
-    credenza-redis:
+    credenza-redis-backend:
       profiles:
         - credenza-redis-backend
       extends:
@@ -86,6 +100,30 @@
       extends:
         file: redis/docker-compose.yml
         service: credenza-redis-commander
+      restart: no
+
+    # Credenza Postgres container
+    credenza-postgres:
+      profiles:
+        - credenza-postgres
+      extends:
+        file: credenza/docker-compose.yml
+        service: credenza
+      depends_on:
+        database:
+          condition: service_healthy
+      restart: no
+
+    # Credenza Redis container
+    credenza-redis:
+      profiles:
+        - credenza-redis
+      extends:
+        file: credenza/docker-compose.yml
+        service: credenza
+      depends_on:
+        credenza-redis-backend:
+          condition: service_healthy
       restart: no
 
     # Credenza Postgres test/dev container
@@ -108,7 +146,7 @@
         file: credenza/docker-compose.yml
         service: credenza-test
       depends_on:
-        credenza-redis:
+        credenza-redis-backend:
           condition: service_healthy
       restart: no
 
@@ -214,6 +252,72 @@
         file: jupyter/docker-compose.yml
         service: jupyter-singleuser
 
+    # MCP Server
+    deriva-mcp:
+      profiles:
+        - deriva-mcp
+      extends:
+        file: mcp/docker-compose.yml
+        service: deriva-mcp
+      depends_on:
+        credenza-redis:
+          condition: service_healthy
+          required: false
+        credenza-postgres:
+          condition: service_healthy
+          required: false
+
+    # Chatbot UI
+    deriva-chatbot:
+      profiles:
+        - deriva-chatbot
+      extends:
+        file: mcp-ui/docker-compose.yml
+        service: deriva-chatbot
+      depends_on:
+        deriva-mcp:
+          condition: service_healthy
+          required: false
+        credenza-redis:
+          condition: service_healthy
+          required: false
+        credenza-postgres:
+          condition: service_healthy
+          required: false
+
+    # MCP Server - live code edit variant (mcp-test profile)
+    deriva-mcp-test:
+      profiles:
+        - deriva-mcp-test
+      extends:
+        file: mcp/docker-compose.yml
+        service: deriva-mcp-test
+      depends_on:
+        credenza-redis:
+          condition: service_healthy
+          required: false
+        credenza-postgres:
+          condition: service_healthy
+          required: false
+
+    # Chatbot UI - live code edit variant (chatbot-test profile)
+    deriva-chatbot-test:
+      profiles:
+        - deriva-chatbot-test
+      extends:
+        file: mcp-ui/docker-compose.yml
+        service: deriva-chatbot-test
+      depends_on:
+        deriva-mcp-test:
+          condition: service_healthy
+          required: false
+        credenza-redis:
+          condition: service_healthy
+          required: false
+        credenza-postgres:
+          condition: service_healthy
+          required: false
+
     # DDNS Automatic Updater
     ddns-updater:
       profiles:
@@ -232,6 +336,12 @@
 
     # Deriva Groups
     deriva_groups:
+
+    # Deriva Chatbot
+    deriva_chatbot_data:
+
+    # Deriva MCP
+    deriva_mcp_data:
 
     # Deriva Monitoring UI
     loki_wal:
@@ -278,9 +388,13 @@
     credenza_redis_commander_password:
       file: ${SECRETS_DIR}/credenza_redis_commander_password.txt
 
-    # JupyterHub crypt key - used to encrypt sensistive data in JupyterHub database
+    # JupyterHub crypt key - used to encrypt sensitive data in JupyterHub database
     jupyterhub_crypt_key:
       file: ${SECRETS_DIR}/jupyterhub_crypt_key.txt
+
+    # MCP Server client secret
+    mcp_client_secret:
+      file: ${SECRETS_DIR}/mcp_client_secret.txt
 
   networks:
     internal_network:

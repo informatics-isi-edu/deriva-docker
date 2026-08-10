@@ -14,7 +14,7 @@ services:
       - credenza_redis_data:/data
     networks:
       - internal_network
-    entrypoint: ["/usr/local/bin/redis-entrypoint.sh"]
+    entrypoint: ["sh", "/usr/local/bin/redis-entrypoint.sh"]
     logging:
       driver: syslog
       options:
@@ -31,7 +31,7 @@ services:
     image: ghcr.io/joeferner/redis-commander:latest
     container_name: credenza-redis-commander
     depends_on:
-      credenza-redis:
+      credenza-redis-backend:
         condition: service_healthy
     environment:
       - REDIS_HOST=credenza-redis

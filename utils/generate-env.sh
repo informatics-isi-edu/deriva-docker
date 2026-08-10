@@ -13,11 +13,20 @@ ENABLE_KEYCLOAK="false"
 ENABLE_JUPYTER="false"
 ENABLE_GROUPS="false"
 ENABLE_DDNS="false"
+ENABLE_MCP="false"
+ENABLE_CHATBOT="false"
+DERIVA_CHATBOT_LLM_API_KEY=""
+ENABLE_MCP_AWS="false"
+AUTH_HOSTNAME=""
+AWS_REGION="us-west-2"
+AWS_LOG_GROUP="/deriva/chatbot"
 LETSENCRYPT_EMAIL=""
 CERT_FILENAME=""
 KEY_FILENAME=""
 CA_FILENAME=""
 CERT_DIR=""
+LETSENCRYPT_CA_SERVER=""
+INSTALL_SYMLINK="false"
 
 print_help() {
   cat <<EOF
@@ -36,11 +45,28 @@ Options:
   --enable-groups, -g               Enable Deriva Groups containers
   --enable-jupyter, -j              Enable Jupyter containers
   --enable-ddns,                    Enable DDNS refresh
+  --enable-mcp, -m                  Enable the DERIVA MCP server (deriva-mcp)
+  --enable-chatbot, -b              Enable the DERIVA Chatbot UI (deriva-mcp-ui)
+  --llm-api-key KEY                 LLM API key (required when --enable-chatbot is set)
+  --enable-mcp-aws                  Enable AWS overrides for the lean MCP stack (CloudWatch logging,
+                                    restart policies). Activates docker-compose-mcp-aws.yml and
+                                    disables the local monitoring stack. Implies --enable-mcp
+                                    and --enable-chatbot.
+  --auth-hostname HOST              Hostname of the credenza instance used for authentication
+                                    (default: same as --hostname). Set this when services
+                                    authenticate against a remote host's credenza rather than
+                                    the local one.
+  --aws-region REGION               AWS region for CloudWatch Logs (default: us-west-2)
+  --aws-log-group GROUP             CloudWatch log group name (default: /deriva/chatbot)
   --email EMAIL                     Let's Encrypt email address (required for dev, staging, prod)
   --cert-filename FILE              Certificate filename (optional)
   --key-filename FILE               Private key filename (optional)
   --ca-filename FILE                CA certificate filename (optional)
   --cert-dir DIR                    Certificate base directory (optional)
+  --letsencrypt-staging             Use the Let's Encrypt staging endpoint (for testing; issues untrusted certs)
+  --install, -i                     Symlink the generated env file to /etc/deriva-docker/deriva-stack.env.
+                                    Attempts directly; prints sudo commands on permission error.
+                                    Ignored with --env all.
   --help, -?                        Show this help message and exit
 
 Examples:
@@ -67,13 +93,22 @@ while [[ $# -gt 0 ]]; do
     --enable-groups|-g) ENABLE_GROUPS="true"; shift ;;
     --enable-jupyter|-j) ENABLE_JUPYTER="true"; shift ;;
     --enable-ddns) ENABLE_DDNS="true"; shift ;;
+    --enable-mcp|-m) ENABLE_MCP="true"; shift ;;
+    --enable-chatbot|-b) ENABLE_CHATBOT="true"; shift ;;
+    --llm-api-key) DERIVA_CHATBOT_LLM_API_KEY="$2"; shift 2 ;;
+    --enable-mcp-aws) ENABLE_MCP_AWS="true"; shift ;;
+    --auth-hostname) AUTH_HOSTNAME="$2"; shift 2 ;;
+    --aws-region) AWS_REGION="$2"; shift 2 ;;
+    --aws-log-group) AWS_LOG_GROUP="$2"; shift 2 ;;
     --ermrest-admin-group) ERMREST_ADMIN_GROUP="$2"; shift 2 ;;
     --hatrac-admin-group) HATRAC_ADMIN_GROUP="$2"; shift 2 ;;
+    --install|-i) INSTALL_SYMLINK="true"; shift ;;
     --email) LETSENCRYPT_EMAIL="$2"; shift 2 ;;
     --cert-filename) CERT_FILENAME="$2"; shift 2 ;;
     --key-filename) KEY_FILENAME="$2"; shift 2 ;;
     --ca-filename) CA_FILENAME="$2"; shift 2 ;;
     --cert-dir) CERT_DIR="$2"; shift 2 ;;
+    --letsencrypt-staging) LETSENCRYPT_CA_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"; shift ;;
     --help|-?) print_help; exit 0 ;;
     *) echo "❌ Unknown option: $1"; echo "Try --help for usage."; exit 1 ;;
   esac
@@ -110,6 +145,21 @@ generate_random_string() {
 
 SECRET_VARS=()
 
+install_symlink() {
+  local env_file
+  env_file="$(realpath "$1")"
+  local system_dir="/etc/deriva-docker"
+  local system_link="${system_dir}/deriva-stack.env"
+
+  if mkdir -p "$system_dir" 2>/dev/null && ln -sf "$env_file" "$system_link" 2>/dev/null; then
+    echo "✅  Installed symlink: ${system_link} -> ${env_file}"
+  else
+    echo "⚠️  Permission denied. Run as root or execute manually:"
+    echo "    sudo mkdir -p ${system_dir}"
+    echo "    sudo ln -sf ${env_file} ${system_link}"
+  fi
+}
+
 # Function to generate an environment file
 generate_env_file() {
   ENV=$1
@@ -122,7 +172,6 @@ generate_env_file() {
   DEFAULT_KEY_FILENAME="${DEFAULT_CERT_DIR}.key"
   DEFAULT_CA_FILENAME="deriva-dev-ca.crt"
   DEFAULT_LETSENCRYPT_EMAIL="isrd-support@isi.edu"
-  DEFAULT_LETSENCRYPT_CERTDIR="\${HOME}/.deriva-docker/certs/\${CONTAINER_HOSTNAME}/letsencrypt"
   DEFAULT_CREDENZA_ENCRYPTION_KEY=$(generate_random_string 24)
   DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET=$(generate_random_string 32)
   DEFAULT_KEYCLOAK_BASE_URL="http://keycloak:8080/auth/realms/deriva"
@@ -148,7 +197,8 @@ generate_env_file() {
   CREDENZA_DB_BACKEND_POSTGRES="postgresql"
   CREDENZA_DB_HOST_POSTGRES=${POSTGRES_HOST}
   CREDENZA_DB_PORT_POSTGRES="5432"
-
+  DEFAULT_MCP_CLIENT_SECRET=$(generate_random_string 32)
+  DEFAULT_DERIVA_MCP_SSL_VERIFY=true
   DEFAULT_ERMREST_ADMIN_GROUP="admin"
   DEFAULT_HATRAC_ADMIN_GROUP="admin"
   CREATE_TEST_DB=false
@@ -166,15 +216,14 @@ generate_env_file() {
     INTERNAL_HOSTNAME="deriva"
   fi
 
+  AUTH_HOSTNAME="${AUTH_HOSTNAME:-$HOSTNAME}"
+
   DEFAULT_SECRETS_DIR="${OUTPUT_DIR}/secrets/${SAFE_HOSTNAME}"
 
   # Apply shared logic for prod/staging/dev
   if [[ "$ENV" == "prod" || "$ENV" == "staging" || "$ENV" == "dev" ]]; then
     if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
       COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt,credenza-redis-backend"
-        if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
-          COMPOSE_PROFILES+=",credenza-redis-test"
-        fi
     else
       COMPOSE_PROFILES+=",deriva-web-rproxy-letsencrypt"
     fi
@@ -211,6 +260,9 @@ generate_env_file() {
       THIRD_OCTET=3
       ENABLE_KEYCLOAK="true"
       ENABLE_JUPYTER="true"
+      ENABLE_MCP="true"
+      ENABLE_CHATBOT="true"
+      CREDENZA_DEBUG="true"
       if  [[ "$ENABLE_CREDENZA_REDIS" == "true" ]]; then
         COMPOSE_PROFILES+=",deriva-web-rproxy,credenza-redis-backend,credenza-redis-commander,test"
         if  [[ "$ENABLE_CREDENZA_ISOLATION" == "true" ]]; then
@@ -251,6 +303,34 @@ generate_env_file() {
   [[ "$ENABLE_KEYCLOAK" == "true" ]] && COMPOSE_PROFILES+=",deriva-auth-keycloak"
   [[ "$ENABLE_GROUPS" == "true" ]] && COMPOSE_PROFILES+=",deriva-groups"
   [[ "$ENABLE_DDNS" == "true" ]] && COMPOSE_PROFILES+=",ddns-update"
+  if [[ "$ENABLE_MCP" == "true" ]]; then
+    if [[ "$ENV" == "test" ]]; then COMPOSE_PROFILES+=",deriva-mcp-test"
+    else COMPOSE_PROFILES+=",deriva-mcp"
+    fi
+  fi
+  if [[ "$ENABLE_CHATBOT" == "true" ]]; then
+    if [[ "$ENV" == "test" ]]; then COMPOSE_PROFILES+=",deriva-chatbot-test"
+    else COMPOSE_PROFILES+=",deriva-chatbot"
+    fi
+  fi
+
+  # AWS MCP deployment: activate mcp+chatbot, load the AWS override file, and
+  # strip the local monitoring/logging stacks (CloudWatch replaces them).
+  COMPOSE_FILE="docker-compose.yml"
+  if [[ "$ENABLE_MCP_AWS" == "true" ]]; then
+    # Ensure mcp and chatbot profiles are active (idempotent if already added above).
+    [[ "$ENABLE_MCP" != "true" ]] && COMPOSE_PROFILES+=",deriva-mcp"
+    [[ "$ENABLE_CHATBOT" != "true" ]] && COMPOSE_PROFILES+=",deriva-chatbot"
+    ENABLE_MCP="true"
+    ENABLE_CHATBOT="true"
+    COMPOSE_PROFILES="${COMPOSE_PROFILES//,deriva-monitoring-base/}"
+    COMPOSE_PROFILES="${COMPOSE_PROFILES//,deriva-monitoring-rproxy/}"
+    # MCP-only stack has no Apache web container; use Traefik-only letsencrypt profile.
+    COMPOSE_PROFILES="${COMPOSE_PROFILES//,deriva-web-rproxy-letsencrypt/,rproxy-letsencrypt}"
+    COMPOSE_FILE="docker-compose.yml:docker-compose-mcp-aws.yml"
+    # Default log group to a hostname-scoped path unless the operator overrode it explicitly.
+    [[ "$AWS_LOG_GROUP" == "/deriva/chatbot" ]] && AWS_LOG_GROUP="/aws/ec2/instance/${HOSTNAME}/chatbot"
+  fi
 
   if [[ "$ENABLE_JUPYTER" == "true" ]]; then
     if [[ "$ENABLE_KEYCLOAK" == "false" ]]; then
@@ -267,7 +347,7 @@ generate_env_file() {
   RPROXY_IP="172.28.${THIRD_OCTET}.250"
 
   LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL:-$DEFAULT_LETSENCRYPT_EMAIL}"
-  LETSENCRYPT_CERTDIR="${LETSENCRYPT_CERTDIR:-$DEFAULT_LETSENCRYPT_CERTDIR}"
+  LETSENCRYPT_CERTDIR="${LETSENCRYPT_CERTDIR:-${HOME}/.deriva-docker/certs/${HOSTNAME}/letsencrypt}"
   ERMREST_ADMIN_GROUP="${HATRAC_ERMREST_GROUP:-$DEFAULT_ERMREST_ADMIN_GROUP}"
   HATRAC_ADMIN_GROUP="${HATRAC_ADMIN_GROUP:-$DEFAULT_HATRAC_ADMIN_GROUP}"
   AUTHN_SESSION_HOST="${AUTHN_SESSION_HOST:-$DEFAULT_AUTHN_SESSION_HOST}"
@@ -277,6 +357,8 @@ generate_env_file() {
   KEYCLOAK_BASE_URL="${KEYCLOAK_BASE_URL:-$DEFAULT_KEYCLOAK_BASE_URL}"
   KEYCLOAK_DERIVA_CLIENT_SECRET="${KEYCLOAK_DERIVA_CLIENT_SECRET:-$DEFAULT_KEYCLOAK_DERIVA_CLIENT_SECRET}"
   SECRETS_DIR="${SECRETS_DIR:-$DEFAULT_SECRETS_DIR}"
+  MCP_CLIENT_SECRET="${MCP_CLIENT_SECRET:-$DEFAULT_MCP_CLIENT_SECRET}"
+  DERIVA_MCP_SSL_VERIFY="${DERIVA_MCP_SSL_VERIFY:-$DEFAULT_DERIVA_MCP_SSL_VERIFY}"
 
   # Build up the set of secret variables to emit to files
   SECRET_VARS=()
@@ -293,29 +375,44 @@ generate_env_file() {
     JUPYTERHUB_CRYPT_KEY
   )
   [[ "$ENV" == "test" && "$ENABLE_CREDENZA_REDIS" == "true" ]] && SECRET_VARS+=(CREDENZA_REDIS_COMMANDER_PASSWORD)
-  # Keycloak secrets
-  if [[ "$ENABLE_KEYCLOAK" == "true" ]]; then
-    SECRET_VARS+=(
-      KEYCLOAK_DERIVA_CLIENT_SECRET
-    )
+  # Keycloak client secret -- written unconditionally so the credenza container can always
+  # mount it as a Docker secret, even when the Keycloak IDP is not active. The entrypoint
+  # injects it optionally (|| true) and require_envs gates actual use.
+  SECRET_VARS+=(KEYCLOAK_DERIVA_CLIENT_SECRET)
+  # MCP secrets
+  if [[ "$ENABLE_MCP" == "true" ]]; then
+    SECRET_VARS+=(MCP_CLIENT_SECRET)
   fi
 
   mkdir -p "$OUTPUT_DIR"
   ENV_FILE="${OUTPUT_DIR}/$SAFE_HOSTNAME.env"
+
+  # Only remap hostnames and disable SSL verification when running locally
+  if [[ "$ORG_HOSTNAME" == "localhost" ]]; then
+    DERIVA_MCP_HOSTNAME_MAP="{\"${HOSTNAME}\":\"${INTERNAL_HOSTNAME}\"}"
+    DERIVA_MCP_SSL_VERIFY="false"
+  else
+    DERIVA_MCP_HOSTNAME_MAP="{}"
+    DERIVA_MCP_SSL_VERIFY="true"
+  fi
 
   cat <<EOF > "$ENV_FILE"
 # Auto-generated $(date)
 
 # Compose
 COMPOSE_PROFILES=${COMPOSE_PROFILES}
+COMPOSE_FILE=${COMPOSE_FILE}
 COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 
 # General
 DEPLOY_ENV=${ENV}
 CONTAINER_HOSTNAME=${HOSTNAME}
 CONTAINER_HOSTNAME_INTERNAL=${INTERNAL_HOSTNAME}
+AUTH_HOSTNAME=${AUTH_HOSTNAME}
 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
 LETSENCRYPT_CERTDIR=${LETSENCRYPT_CERTDIR}
+LETSENCRYPT_CA_SERVER=${LETSENCRYPT_CA_SERVER}
+STACK_ENV_FILE=${ENV_FILE}
 
 # Networking
 HTTP_PORT=${HTTP_PORT}
@@ -356,6 +453,17 @@ ERMREST_ADMIN_GROUP=${ERMREST_ADMIN_GROUP}
 HATRAC_ADMIN_GROUP=${HATRAC_ADMIN_GROUP}
 AUTHN_SESSION_HOST=${AUTHN_SESSION_HOST}
 AUTHN_SESSION_HOST_VERIFY=${AUTHN_SESSION_HOST_VERIFY}
+
+# MCP
+DERIVA_MCP_SSL_VERIFY=${DERIVA_MCP_SSL_VERIFY}
+DERIVA_MCP_HOSTNAME_MAP=${DERIVA_MCP_HOSTNAME_MAP}
+
+# Chatbot
+DERIVA_CHATBOT_LLM_API_KEY=${DERIVA_CHATBOT_LLM_API_KEY}
+
+# AWS CloudWatch Logs (only active when COMPOSE_FILE includes docker-compose-mcp-aws.yml)
+AWS_REGION=${AWS_REGION}
+AWS_LOG_GROUP=${AWS_LOG_GROUP}
 
 # Secrets
 SECRETS_DIR=${SECRETS_DIR}/${ENV}
@@ -418,6 +526,18 @@ if [[ "$ENV_TYPE" != "all" && ("$ENV_TYPE" == "prod" || "$ENV_TYPE" == "staging"
   exit 1
 fi
 
+# MCP-only stack has no web/postgres container; force Redis for Credenza session storage.
+if [[ "$ENABLE_MCP_AWS" == "true" ]]; then
+  ENABLE_CREDENZA_REDIS="true"
+  ENABLE_CREDENZA_ISOLATION="true"
+fi
+
+# Warn if chatbot enabled without an API key
+if [[ "$ENABLE_CHATBOT" == "true" || "$ENABLE_MCP_AWS" == "true" ]] && [[ -z "$DERIVA_CHATBOT_LLM_API_KEY" ]]; then
+  echo "⚠️  --enable-chatbot is set but --llm-api-key was not provided."
+  echo "   Set DERIVA_CHATBOT_LLM_API_KEY in the generated env file before starting the chatbot."
+fi
+
 
 if [[ "$ENV_TYPE" == "all" ]]; then
   DECORATE_HOSTNAME="true"
@@ -425,7 +545,13 @@ if [[ "$ENV_TYPE" == "all" ]]; then
     generate_env_file "$env"
     emit_envs_to_files "${SECRET_VARS[@]}" "${SECRETS_DIR}/${env}"
   done
+  if [[ "$INSTALL_SYMLINK" == "true" ]]; then
+    echo "⚠️  --install is not supported with --env all; skipping symlink."
+  fi
 else
   generate_env_file "$ENV_TYPE"
   emit_envs_to_files "${SECRET_VARS[@]}" "${SECRETS_DIR}/${ENV_TYPE}"
+  if [[ "$INSTALL_SYMLINK" == "true" ]]; then
+    install_symlink "$ENV_FILE"
+  fi
 fi

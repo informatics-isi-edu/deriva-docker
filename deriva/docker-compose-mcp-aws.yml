@@ -1,0 +1,150 @@
+# AWS deployment overrides for the lean MCP stack:
+#   Traefik (rproxy-letsencrypt + traefik-docker-proxy)
+#   deriva-mcp-core, deriva-mcp-ui, credenza-redis
+#
+# This file is a compose override -- it patches specific properties on top of
+# docker-compose.yml for an EC2 deployment that does not run the full deriva-docker
+# web stack (no postgres, rabbitmq, keycloak, jupyter, apache, monitoring stack).
+#
+# Usage (set in generated env file via utils/generate-env.sh --enable-mcp-aws):
+#
+#   COMPOSE_FILE=docker-compose.yml:docker-compose-mcp-aws.yml
+#
+# Required env vars: AWS_REGION, AWS_LOG_GROUP
+# IAM instance role must allow: logs:CreateLogGroup, logs:CreateLogStream,
+# logs:PutLogEvents
+#
+# Additional overrides can be added here as the AWS deployment evolves:
+# resource limits (mem_limit, cpus), volume path changes for EBS mounts, etc.
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Logging stub: satisfies depends_on: logging: service_healthy on mcp-core,
+  # mcp-ui, and credenza-redis without running rsyslog. All log output goes to
+  # CloudWatch via the awslogs driver on each individual service.
+  # ---------------------------------------------------------------------------
+  logging:
+    image: busybox
+    container_name: logging-stub
+    entrypoint: []
+    command: ["sleep", "infinity"]
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 5s
+      timeout: 2s
+      retries: 1
+      start_period: 1s
+    networks:
+      - internal_network
+
+  # ---------------------------------------------------------------------------
+  # Traefik reverse proxy (Let's Encrypt variant used for AWS/prod deployments)
+  # Base compose has restart: no -- override to recover from crashes/reboots.
+  # Base compose has no logging block -- add awslogs so Traefik access and
+  # error logs land in CloudWatch alongside the application logs.
+  # ---------------------------------------------------------------------------
+  rproxy-letsencrypt:
+    restart: on-failure:5
+    depends_on:
+      deriva-chatbot:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: traefik
+        awslogs-create-group: "true"
+
+  traefik-docker-proxy:
+    restart: on-failure:5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: traefik-docker-proxy
+        awslogs-create-group: "true"
+
+  credenza-redis:
+    restart: on-failure:5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: credenza-redis
+        awslogs-create-group: "true"
+    volumes:
+      - ./credenza/config-mnt:/credenza/config
+
+  credenza-redis-backend:
+    restart: on-failure:5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: credenza-redis-backend
+        awslogs-create-group: "true"
+
+  deriva-mcp:
+    restart: on-failure:5
+    depends_on:
+      credenza-redis:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: mcp-core
+        awslogs-create-group: "true"
+    # Operator config dir mounted from EBS-persistent path.
+    # Entrypoint seeds missing files from image defaults on first start.
+    # Sequence volumes replace (not merge) on overlay -- all base volumes repeated.
+    volumes:
+      - ./mcp/config-mnt:/etc/deriva-mcp
+      - ../certs:/certs-ext:ro
+      - deriva_mcp_data:/var/lib/deriva-mcp/data
+
+  deriva-chatbot:
+    restart: on-failure:5
+    depends_on:
+      deriva-mcp:
+        condition: service_healthy
+      credenza-redis:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-stream: mcp-ui
+        awslogs-create-group: "true"
+    # Operator config dir mounted from EBS-persistent path.
+    # Entrypoint seeds missing files from image defaults on first start.
+    # Sequence volumes replace (not merge) on overlay -- all base volumes repeated.
+    volumes:
+      - deriva_chatbot_data:/var/lib/deriva-chatbot
+      - ./mcp-ui/config-mnt:/etc/deriva-mcp-ui
+      - ../certs:/certs-ext:ro
+    # Override base labels to add root-to-chatbot redirect and Let's Encrypt
+    # cert resolver. Sequence labels replace (not merge) on overlay, so all
+    # base labels must be repeated here.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatbot.rule=(Host(`${CONTAINER_HOSTNAME}`) || Host(`${CONTAINER_HOSTNAME_INTERNAL}`)) && (PathPrefix(`/chatbot`) || Path(`/`))"
+      - "traefik.http.routers.chatbot.entrypoints=websecure"
+      - "traefik.http.routers.chatbot.tls=true"
+      - "traefik.http.routers.chatbot.tls.options=mintls13@file"
+      - "traefik.http.routers.chatbot.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.chatbot.tls.domains[0].main=${CONTAINER_HOSTNAME}"
+      - "traefik.http.routers.chatbot.priority=60"
+      - "traefik.http.routers.chatbot.middlewares=root-to-chatbot,chatbot-stripprefix"
+      - "traefik.http.services.chatbot.loadbalancer.server.port=8001"
+      - "traefik.http.middlewares.chatbot-stripprefix.stripPrefix.prefixes=/chatbot"
+      - "traefik.http.middlewares.root-to-chatbot.redirectregex.regex=^https://[^/]+/?$"
+      - "traefik.http.middlewares.root-to-chatbot.redirectregex.replacement=/chatbot/"
+      - "traefik.http.middlewares.root-to-chatbot.redirectregex.permanent=false"

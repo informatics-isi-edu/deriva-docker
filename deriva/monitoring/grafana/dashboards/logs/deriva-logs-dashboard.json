@@ -24,8 +24,7 @@
       "gridPos": {
         "h": 5,
         "w": 24,
-        "x": 0,
-        "y": 0
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -51,8 +50,7 @@
       "gridPos": {
         "h": 5,
         "w": 24,
-        "x": 0,
-        "y": 1
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -78,8 +76,7 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 2
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -105,8 +102,7 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 3
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -132,8 +128,7 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 4
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -159,8 +154,7 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 5
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -186,8 +180,111 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 6
+        "x": 0
+      },
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "type": "logs",
+      "title": "deriva-mcp",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "{log=\"deriva-mcp\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0
+      },
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "type": "logs",
+      "title": "deriva-mcp-audit",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "{log=\"deriva-mcp-audit\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0
+      },
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "dedupStrategy": "none"
+      }
+    },
+{
+      "type": "logs",
+      "title": "deriva-chatbot",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "{log=\"deriva-chatbot\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0
+      },
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "type": "logs",
+      "title": "deriva-chatbot-audit",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "{log=\"deriva-mcp-ui-audit\"}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -213,8 +310,7 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 7
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -240,8 +336,7 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 8
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -267,8 +362,7 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 9
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -295,8 +389,7 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 10
+        "x": 0
       },
       "options": {
         "showLabels": false,
@@ -322,8 +415,7 @@
       "gridPos": {
         "h": 9,
         "w": 24,
-        "x": 0,
-        "y": 11
+        "x": 0
       },
       "options": {
         "showLabels": false,
