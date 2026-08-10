@@ -94,6 +94,35 @@ ENV PYTHONPATH=/deriva-mcp-core/src
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Workflow-provenance environment variables.
+#
+# deriva-ml's Workflow Pydantic validator (`setup_url_checksum` in
+# deriva-ml/execution/workflow.py) tries three strategies in order to
+# fill in the Workflow row's url/checksum/version: (1) Docker mode --
+# gated on DERIVA_MCP_IN_DOCKER=true, reads image-metadata env vars;
+# (2) explicit DERIVA_ML_WORKFLOW_URL override; (3) git-binary
+# introspection as fallback. The runtime stage of this image does not
+# install `git`, so strategy 3 dies with "[Errno 2] No such file or
+# directory: 'git'" -- which is exactly what the 2026-05-21 deriva-ml
+# multi-persona e2e Curator persona observed (finding C02). The fix
+# is to bake the strategy-1 envvars into the image so every
+# Workflow(...) construction inside the container uses Docker
+# provenance and never reaches the git fallback.
+#
+# Canonical reference for the variable contract:
+# deriva-ml/docs/user-guide/reproducibility.md ("Bake these variables
+# into the image so they are present when the container runs.") The
+# upstream deriva-mcp/Dockerfile is the working precedent (its lines
+# 100-113 set the same envvars from build args).
+ARG VERSION
+ARG GIT_COMMIT
+ENV DERIVA_MCP_IN_DOCKER="true"
+ENV DERIVA_MCP_IMAGE_NAME="ghcr.io/informatics-isi-edu/deriva-mcp-core"
+ENV DERIVA_MCP_VERSION=${VERSION}
+ENV DERIVA_MCP_GIT_COMMIT=${GIT_COMMIT}
+ENV DERIVA_MCP_WORKFLOW_NAME="Deriva MCP Core Server"
+ENV DERIVA_MCP_WORKFLOW_TYPE="Deriva MCP"
+
 COPY config/rsyslog.conf /etc/rsyslog.conf
 COPY config/ /etc/deriva-mcp/
 COPY config/ /etc/deriva-mcp-defaults/
